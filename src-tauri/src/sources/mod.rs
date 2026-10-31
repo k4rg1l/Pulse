@@ -57,6 +57,8 @@ pub enum WidgetType {
     List,
     /// Labelled text rows. Key holds an array of `{label, value}`.
     Details,
+    /// One quiet line that closes the tab. Key holds text.
+    Colophon,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -66,6 +68,8 @@ pub struct Widget {
     pub kind: WidgetType,
     pub title: &'static str,
     pub keys: &'static [&'static str],
+    /// Key of a short text printed on the widget, naming what it measures.
+    pub note: Option<&'static str>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]

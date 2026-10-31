@@ -2,12 +2,11 @@
    display serif for titles and large figures. Glass, glow and motion are kept for
    selected states and the moments a person acts.
 
-   Layout rule: the panel decides every box's width, and content never does. Column
-   counts come from the space available, sizes are relative, and every live value
-   goes through Fit, so a value cannot overflow or move anything. Height follows
-   content, and a changing value never changes it. Only overlays that must float
-   above the flow (the panel on its stage, the notch, tooltips) are positioned
-   absolutely. */
+   Layout rule: the panel is one constant size on every tab, and it decides every
+   box inside it. Content never does. Column counts come from the space available,
+   sizes are relative, and every live value goes through Fit, so a value cannot
+   overflow or move anything. Only overlays that must float above the flow (the
+   panel on its stage, the notch, tooltips) are positioned absolutely. */
 
 :root {
   color-scheme: dark;
@@ -168,9 +167,8 @@ h2 {
   background: transparent;
 }
 
-/* The popover. The stage is the whole transparent window. The panel sits on the
-   side facing the icon and takes its height from its content, so it stays joined
-   to the notch whatever the tab holds. */
+/* The popover. The stage is the whole transparent window, and the panel sits in
+   it with room for its shadow and notch. */
 
 .stage {
   position: fixed;
@@ -179,11 +177,9 @@ h2 {
 
 .panel {
   position: absolute;
-  left: var(--stage-margin);
-  right: var(--stage-margin);
+  inset: var(--stage-margin);
   display: flex;
   flex-direction: column;
-  max-height: calc(100% - var(--stage-margin) * 2);
   border-radius: var(--radius);
   background: var(--obsidian);
   box-shadow:
@@ -192,7 +188,6 @@ h2 {
     0 1.4rem 3rem -0.6rem rgba(0, 0, 0, 0.6);
   opacity: 0;
   transform: var(--from) scale(0.965);
-  interpolate-size: allow-keywords;
   transition:
     opacity 0.08s linear,
     transform 0.08s linear;
@@ -203,33 +198,26 @@ h2 {
   transform: none;
   transition:
     opacity 0.16s linear,
-    transform 0.3s var(--ease-out),
-    height 0.28s var(--ease-out);
+    transform 0.3s var(--ease-out);
 }
 
 .stage[data-side="bottom"] .panel {
   --from: translateY(0.62rem);
-  bottom: var(--stage-margin);
   transform-origin: calc(var(--notch) - var(--stage-margin)) 100%;
 }
 
 .stage[data-side="top"] .panel {
   --from: translateY(-0.62rem);
-  top: var(--stage-margin);
   transform-origin: calc(var(--notch) - var(--stage-margin)) 0;
 }
 
 .stage[data-side="left"] .panel {
   --from: translateX(-0.62rem);
-  top: var(--stage-margin);
-  bottom: var(--stage-margin);
   transform-origin: 0 calc(var(--notch) - var(--stage-margin));
 }
 
 .stage[data-side="right"] .panel {
   --from: translateX(0.62rem);
-  top: var(--stage-margin);
-  bottom: var(--stage-margin);
   transform-origin: 100% calc(var(--notch) - var(--stage-margin));
 }
 
@@ -286,7 +274,7 @@ h2 {
 /* The navbar has its own row, so nothing in the content can move it. */
 .panel-body {
   display: flex;
-  flex: 0 1 auto;
+  flex: 1;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
@@ -296,7 +284,7 @@ h2 {
 
 /* The gutter stays reserved, so width is the same whether or not a tab scrolls. */
 .panel-scroll {
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -389,6 +377,26 @@ h2 {
   align-items: center;
   gap: var(--gap);
   margin-top: 0.46rem;
+}
+
+/* Lettering on the instruments and the closing line, always selectable. */
+.note,
+.colophon {
+  font-family: var(--serif);
+  font-style: italic;
+  line-height: 1.2;
+  user-select: text;
+}
+
+.note {
+  font-size: 1.15rem;
+  color: var(--ivory-soft);
+}
+
+.colophon {
+  margin-top: var(--edge);
+  font-size: 1.08rem;
+  color: var(--ivory-faint);
 }
 
 .notice {
@@ -602,6 +610,13 @@ h2 {
   gap: 0.31rem;
 }
 
+.chart-title {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: baseline;
+  gap: var(--gap);
+}
+
 .widget-hero .chart-header {
   flex-direction: row-reverse;
   align-items: flex-end;
@@ -619,10 +634,17 @@ h2 {
   letter-spacing: -0.02em;
 }
 
-.widget-hero h2 {
-  flex: 0 1 auto;
+.widget-hero .chart-title {
+  display: flex;
+  flex: 0 0 40%;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 0.15rem;
   min-width: 0;
   padding-bottom: 0.46rem;
+}
+
+.widget-hero h2 {
   font-size: 1rem;
 }
 
@@ -746,7 +768,7 @@ h2 {
   max-width: 100%;
   padding: 0.54rem 0.77rem;
   border-radius: 0.77rem;
-  background: rgba(27, 28, 32, 0.72);
+  background: rgba(27, 28, 32, 0.78);
   backdrop-filter: blur(1.1rem);
   box-shadow:
     inset 0 1px 0 var(--glass-edge),
@@ -918,7 +940,7 @@ h2 {
   gap: 0.62rem;
 }
 
-/* The list opens in the flow, under its row, and the panel grows to hold it. */
+/* The list opens in the flow, under its row, and the page scrolls if it needs to. */
 .picker {
   display: contents;
 }

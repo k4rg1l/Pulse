@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { connectSource, getTab, onSourceChanged, refreshSource, type Tab } from "./api";
 import { Fit } from "./Fit";
 import { formatAgo } from "./format";
-import { WidgetView } from "./widgets";
+import { Colophon, WidgetView } from "./widgets";
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -116,6 +116,8 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
 
   const updatedAt = tab.values.reduce((latest, value) => Math.max(latest, value.fetched_at), 0);
   const heroId = tab.widgets.find((widget) => widget.type === "chart")?.id;
+  const colophon = tab.widgets.find((widget) => widget.type === "colophon");
+  const widgets = tab.widgets.filter((widget) => widget !== colophon);
 
   const selectedRange = RANGES.findIndex((range) => range.ms === rangeMs);
 
@@ -181,7 +183,7 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
       )}
 
       <div className="widgets">
-        {tab.widgets.map((widget) => (
+        {widgets.map((widget) => (
           <WidgetView
             key={widget.id}
             widget={widget}
@@ -192,6 +194,8 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
           />
         ))}
       </div>
+
+      {colophon && <Colophon widget={colophon} tab={tab} />}
     </>
   );
 }

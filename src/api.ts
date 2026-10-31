@@ -17,7 +17,8 @@ export type WidgetType =
   | "stat"
   | "bars"
   | "list"
-  | "details";
+  | "details"
+  | "colophon";
 
 export interface TabSummary {
   source_id: string;
@@ -29,6 +30,7 @@ export interface Widget {
   type: WidgetType;
   title: string;
   keys: string[];
+  note: string | null;
 }
 
 export interface Metric {

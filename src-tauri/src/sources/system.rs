@@ -7,7 +7,7 @@ use std::{
 
 use async_trait::async_trait;
 use nvml_wrapper::{Nvml, enum_wrappers::device::TemperatureSensor, error::NvmlError};
-use serde_json::{Value as Json, json};
+use serde_json::json;
 use sysinfo::{Disks, MINIMUM_CPU_UPDATE_INTERVAL, Networks, System};
 
 use super::{Metric, Reading, Source, Unit, Widget, WidgetType};
@@ -40,64 +40,74 @@ impl Source for SystemResources {
     fn widgets(&self) -> Vec<Widget> {
         vec![
             Widget {
-                id: "details",
-                kind: WidgetType::Details,
-                title: "System details",
-                keys: &["system.details"],
-            },
-            Widget {
                 id: "cpu",
                 kind: WidgetType::Chart,
                 title: "CPU",
                 keys: &["cpu.usage"],
-            },
-            Widget {
-                id: "memory",
-                kind: WidgetType::Meter,
-                title: "Memory",
-                keys: &["memory.usage", "memory.used", "memory.total"],
-            },
-            Widget {
-                id: "uptime",
-                kind: WidgetType::Stat,
-                title: "Uptime",
-                keys: &["uptime"],
-            },
-            Widget {
-                id: "gpu",
-                kind: WidgetType::Chart,
-                title: "GPU",
-                keys: &["gpu.usage"],
-            },
-            Widget {
-                id: "vram",
-                kind: WidgetType::Meter,
-                title: "GPU memory",
-                keys: &["gpu.memory.usage", "gpu.memory.used", "gpu.memory.total"],
-            },
-            Widget {
-                id: "gpu-temperature",
-                kind: WidgetType::Stat,
-                title: "GPU temp",
-                keys: &["gpu.temperature"],
-            },
-            Widget {
-                id: "network",
-                kind: WidgetType::MirrorChart,
-                title: "Network",
-                keys: &["net.down", "net.up"],
+                note: Some("system.processor"),
             },
             Widget {
                 id: "cores",
                 kind: WidgetType::Bars,
                 title: "CPU cores",
                 keys: &["cpu.cores"],
+                note: Some("system.cores"),
+            },
+            Widget {
+                id: "gpu",
+                kind: WidgetType::Chart,
+                title: "GPU",
+                keys: &["gpu.usage"],
+                note: Some("system.graphics"),
+            },
+            Widget {
+                id: "vram",
+                kind: WidgetType::Meter,
+                title: "GPU memory",
+                keys: &["gpu.memory.usage", "gpu.memory.used", "gpu.memory.total"],
+                note: None,
+            },
+            Widget {
+                id: "gpu-temperature",
+                kind: WidgetType::Stat,
+                title: "GPU temp",
+                keys: &["gpu.temperature"],
+                note: None,
+            },
+            Widget {
+                id: "memory",
+                kind: WidgetType::Meter,
+                title: "Memory",
+                keys: &["memory.usage", "memory.used", "memory.total"],
+                note: None,
+            },
+            Widget {
+                id: "uptime",
+                kind: WidgetType::Stat,
+                title: "Uptime",
+                keys: &["uptime"],
+                note: None,
             },
             Widget {
                 id: "disks",
                 kind: WidgetType::List,
                 title: "Disks",
                 keys: &["disks"],
+                note: None,
+            },
+            Widget {
+                id: "network",
+                kind: WidgetType::MirrorChart,
+                title: "Network",
+                keys: &["net.down", "net.up"],
+                note: None,
+            },
+            Widget {
+                id: "machine",
+                kind: WidgetType::Colophon,
+                title: "This computer",
+                keys: &["system.machine"],
+                note: None,
             },
         ]
     }
@@ -187,7 +197,7 @@ struct Sampler {
     /// Absent without an NVIDIA driver. The first GPU is the one reported.
     nvml: Option<Nvml>,
     /// Fixed for the life of the app, so read once.
-    details: Option<Json>,
+    identity: Option<Identity>,
 }
 
 impl Sampler {
@@ -198,7 +208,7 @@ impl Sampler {
             disks: Disks::new_with_refreshed_list()?,
             last_sample: None,
             nvml: Nvml::init().ok(),
-            details: None,
+            identity: None,
         })
     }
 
@@ -256,12 +266,15 @@ impl Sampler {
             })
             .collect();
 
-        let details = self
-            .details
-            .get_or_insert_with(|| read_details(&self.system, self.nvml.as_ref()));
+        let identity = self
+            .identity
+            .get_or_insert_with(|| read_identity(&self.system, self.nvml.as_ref()));
 
         let mut readings = vec![
-            Reading::current_only("system.details", details.clone()),
+            Reading::current_only("system.processor", identity.processor.as_str()),
+            Reading::current_only("system.graphics", identity.graphics.as_str()),
+            Reading::current_only("system.cores", identity.cores.as_str()),
+            Reading::current_only("system.machine", identity.machine.as_str()),
             Reading::new("cpu.usage", round(self.system.global_cpu_usage() as f64)),
             Reading::new("cpu.cores", cores),
             Reading::new(
@@ -303,29 +316,57 @@ fn read_gpu(nvml: &Nvml) -> Result<Vec<Reading>, NvmlError> {
     ])
 }
 
-fn read_details(system: &System, nvml: Option<&Nvml>) -> Json {
-    let unknown = || "Unknown".to_owned();
-    let processor = system.cpus().first().map_or_else(unknown, |cpu| {
-        cpu.brand()
-            .replace("(R)", "")
-            .replace("(TM)", "")
-            .trim()
-            .to_owned()
-    });
+/// The names printed on each instrument.
+struct Identity {
+    processor: String,
+    graphics: String,
+    cores: String,
+    machine: String,
+}
+
+fn read_identity(system: &System, nvml: Option<&Nvml>) -> Identity {
     let threads = system.cpus().len();
     let cores = System::physical_core_count().map_or_else(
         |_| format!("{threads} threads"),
         |cores| format!("{cores} cores, {threads} threads"),
     );
-    let graphics = nvml.and_then(|nvml| nvml.device_by_index(0).ok()?.name().ok());
+    let graphics = nvml
+        .and_then(|nvml| nvml.device_by_index(0).ok()?.name().ok())
+        .unwrap_or_default();
 
-    json!([
-        { "label": "Computer", "value": System::host_name().unwrap_or_else(|_| unknown()) },
-        { "label": "System", "value": System::long_os_version().unwrap_or_else(|_| unknown()) },
-        { "label": "Processor", "value": processor },
-        { "label": "Cores", "value": cores },
-        { "label": "Graphics", "value": graphics.unwrap_or_else(unknown) },
-    ])
+    Identity {
+        processor: system
+            .cpus()
+            .first()
+            .map_or_else(String::new, |cpu| short_processor(cpu.brand())),
+        graphics: short_graphics(&graphics).to_owned(),
+        cores,
+        machine: format!(
+            "{} on {}",
+            System::host_name().unwrap_or_default(),
+            System::long_os_version().unwrap_or_default()
+        ),
+    }
+}
+
+/// The model alone: "13th Gen Intel Core i7-13700K" becomes "i7-13700K".
+fn short_processor(brand: &str) -> String {
+    let brand = brand.replace("(R)", "").replace("(TM)", "");
+    let model = brand
+        .split_once(" Core ")
+        .map_or(brand.as_str(), |(_, model)| model);
+    model
+        .trim_start_matches("AMD ")
+        .split_whitespace()
+        .take_while(|word| !word.ends_with("-Core"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The model alone: "NVIDIA GeForce RTX 4070 Ti" becomes "RTX 4070 Ti".
+fn short_graphics(name: &str) -> &str {
+    name.trim_start_matches("NVIDIA ")
+        .trim_start_matches("GeForce ")
 }
 
 fn describe(error: sysinfo::Error) -> String {

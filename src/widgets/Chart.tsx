@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEve
 import { getHistory, type Metric, type Unit } from "../api";
 import { Fit } from "../Fit";
 import { formatClock, formatDayTime, formatValue } from "../format";
-import { Figure, numberValue, type WidgetProps } from "./types";
+import { Figure, Note, numberValue, textValue, type WidgetProps } from "./types";
 
 const MAX_POINTS = 240;
 const DAY = 24 * 60 * 60 * 1000;
@@ -161,6 +161,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const latest = (metric: Metric | undefined) =>
     metric ? numberValue(tab, metric.key) : undefined;
   const headline = latest(metrics[0]);
+  const note = textValue(tab, widget.note);
 
   const timeLabel = rangeMs > DAY ? formatDayTime : (t: number) => formatClock(t, false);
   const hoverX = hovered ? x(hovered.time) : 0;
@@ -178,7 +179,12 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   return (
     <>
       <header className="chart-header">
-        <h2>{hero ? widget.title : <Fit>{widget.title}</Fit>}</h2>
+        <div className="chart-title">
+          <h2>
+            <Fit end={hero}>{widget.title}</Fit>
+          </h2>
+          {note && <Note text={note} />}
+        </div>
         {series.length === 1 ? (
           <p className="readout">
             <Fit>

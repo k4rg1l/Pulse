@@ -52,36 +52,42 @@ impl Source for ClaudeUsage {
                 kind: WidgetType::Chart,
                 title: "5-hour limit used",
                 keys: &["claude.five_hour.usage"],
+                note: None,
             },
             Widget {
                 id: "five-hour",
                 kind: WidgetType::Meter,
                 title: "5-hour limit",
                 keys: &["claude.five_hour.usage", "claude.five_hour.resets_at"],
+                note: None,
             },
             Widget {
                 id: "tokens-five-hour",
                 kind: WidgetType::Stat,
                 title: "Tokens, 5h",
                 keys: &["claude.tokens.five_hour"],
+                note: None,
             },
             Widget {
                 id: "seven-day",
                 kind: WidgetType::Meter,
                 title: "Weekly limit",
                 keys: &["claude.seven_day.usage", "claude.seven_day.resets_at"],
+                note: None,
             },
             Widget {
                 id: "limits-as-of",
                 kind: WidgetType::Stat,
                 title: "Limits as of",
                 keys: &["claude.limits_as_of"],
+                note: None,
             },
             Widget {
                 id: "models",
                 kind: WidgetType::Details,
                 title: "Tokens this week",
                 keys: &["claude.models"],
+                note: None,
             },
         ]
     }

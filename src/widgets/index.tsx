@@ -3,7 +3,7 @@ import type { WidgetType } from "../api";
 import { Fit } from "../Fit";
 import { formatBytes, formatDuration, formatValue } from "../format";
 import { Chart } from "./Chart";
-import { Figure, numberValue, rawValue, type WidgetProps } from "./types";
+import { Figure, Note, numberValue, rawValue, textValue, type WidgetProps } from "./types";
 
 /** Keeps its line even when empty, so a caption arriving never changes the height. */
 const EMPTY_LINE = " ";
@@ -75,13 +75,13 @@ function Bars({ widget, tab }: WidgetProps) {
         <h2>
           <Fit>{widget.title}</Fit>
         </h2>
-        <p className="caption">
-          <Fit end>
-            {hovered === null
-              ? `${values.length} cores`
-              : `Core ${hovered + 1}: ${Math.round(values[hovered] ?? 0)}%`}
-          </Fit>
-        </p>
+        <Note
+          text={
+            hovered === null
+              ? (textValue(tab, widget.note) ?? `${values.length} cores`)
+              : `Core ${hovered + 1}: ${Math.round(values[hovered] ?? 0)}%`
+          }
+        />
       </header>
       <div
         className="bars"
@@ -164,6 +164,16 @@ function Details({ widget, tab }: WidgetProps) {
   );
 }
 
+/** Closes a tab with one quiet line. */
+export function Colophon({ widget, tab }: Pick<WidgetProps, "widget" | "tab">) {
+  const text = textValue(tab, widget.keys[0]);
+  return text ? (
+    <p className="colophon">
+      <Fit>{text}</Fit>
+    </p>
+  ) : null;
+}
+
 const WIDGETS: Record<WidgetType, ComponentType<WidgetProps>> = {
   chart: Chart,
   mirror_chart: Chart,
@@ -172,6 +182,7 @@ const WIDGETS: Record<WidgetType, ComponentType<WidgetProps>> = {
   bars: Bars,
   list: List,
   details: Details,
+  colophon: Colophon,
 };
 
 export function WidgetView(props: WidgetProps) {
