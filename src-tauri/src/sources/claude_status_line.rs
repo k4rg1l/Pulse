@@ -16,7 +16,7 @@ use std::{
 
 use serde_json::{Map, Value as Json, json};
 
-use super::{Setup, SetupState};
+use super::{CREATE_NO_WINDOW, Setup, SetupState};
 
 /// Passed by Claude Code to run this executable as the hook instead of the app.
 pub const HOOK_FLAG: &str = "--claude-status";
@@ -26,9 +26,6 @@ const STATUS_FILE: &str = "claude-status.json";
 const ORIGINAL_FILE: &str = "claude-status-line-original.json";
 const BACKUP_SUFFIX: &str = ".pulse-backup";
 const STATUS_LINE: &str = "statusLine";
-
-/// Stops a console window flashing when a wrapped command starts.
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 pub fn claude_dir() -> Option<PathBuf> {
     if let Some(dir) = env::var_os("CLAUDE_CONFIG_DIR") {

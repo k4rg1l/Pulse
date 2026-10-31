@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Tab, Widget } from "../api";
 import { Fit } from "../Fit";
 
@@ -31,6 +32,35 @@ export function Note({ text, end = true }: { text: string; end?: boolean }) {
     <p className="note">
       <Fit end={end}>{text}</Fit>
     </p>
+  );
+}
+
+/**
+ * A label drawn over a chart's data, with a halo of the surface behind it, so a
+ * line passes behind the label the way a road breaks around a place name on a
+ * map. The halo is its own layer because a browser paints each run of text
+ * separately, and one run's outline would otherwise bite into the next.
+ */
+export function PlotLabel({
+  x,
+  y,
+  anchor,
+  children,
+}: {
+  x: number;
+  y: number;
+  anchor?: "end";
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <text className="axis-label axis-label-halo" x={x} y={y} textAnchor={anchor}>
+        {children}
+      </text>
+      <text className="axis-label" x={x} y={y} textAnchor={anchor}>
+        {children}
+      </text>
+    </>
   );
 }
 

@@ -12,10 +12,15 @@ use serde_json::Value as Json;
 
 pub mod claude;
 pub mod claude_status_line;
+pub mod codex;
+mod codex_app_server;
 pub mod system;
 
 /// How long a run may take before the scheduler stops it and counts a failure.
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Stops a console window flashing when a source starts another program.
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,6 +31,8 @@ pub enum Unit {
     Seconds,
     Celsius,
     Count,
+    /// A balance, where every digit matters, so it is never shortened.
+    Amount,
     /// Milliseconds since the epoch.
     Timestamp,
 }
@@ -47,16 +54,26 @@ pub enum WidgetType {
     /// Two keys over time on one scale, the first above a centre line and the
     /// second below it, so they can never cover each other.
     MirrorChart,
+    /// A usage limit across its whole window against an even pace. Keys: percent,
+    /// reset timestamp, window length in milliseconds. The note key holds its
+    /// name. It only appears while the window exists.
+    Pace,
     /// Capsule bar. Keys: percent, then used and total, or a reset timestamp.
     Meter,
-    /// One large number.
+    /// One large number, with the note key as a line beneath it.
     Stat,
     /// One bar per entry. Key holds an array of percentages.
     Bars,
+    /// Half a year of days. Key holds an array of `{date, value}`.
+    Calendar,
+    /// A run of days against the longest one. Keys: current, longest.
+    Streak,
     /// Rows with a capsule bar. Key holds an array of `{name, detail, used, total}`.
     List,
     /// Labelled text rows. Key holds an array of `{label, value}`.
     Details,
+    /// Large figures in pairs. Key holds an array of `{label, value, unit}`.
+    Records,
     /// One quiet line that closes the tab. Key holds text.
     Colophon,
 }
@@ -159,5 +176,6 @@ pub fn all() -> Sources {
     vec![
         Arc::new(system::SystemResources::default()),
         Arc::new(claude::ClaudeUsage),
+        Arc::new(codex::CodexUsage::default()),
     ]
 }

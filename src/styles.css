@@ -371,11 +371,13 @@ h2 {
   gap: var(--gap);
 }
 
+/* Holds the range control's height on tabs without one, so tabs line up. */
 .page-meta {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 12rem);
   align-items: center;
   gap: var(--gap);
+  min-height: 2rem;
   margin-top: 0.46rem;
 }
 
@@ -548,6 +550,7 @@ h2 {
 }
 
 .widget {
+  --plot-surface: var(--charcoal);
   container-type: inline-size;
   grid-column: 1 / -1;
   min-width: 0;
@@ -565,18 +568,26 @@ h2 {
     inset 0 1px 0 rgba(240, 234, 222, 0.04);
 }
 
-.widget-stat {
+.widget-stat,
+.widget-streak {
   grid-column: span 1;
 }
 
+/* A line beneath the figure needs the room of a meter. */
+.widget-stat:has(.note) {
+  grid-column: span 2;
+}
+
 @container page (max-width: 16rem) {
-  .widget-meter {
+  .widget-meter,
+  .widget-stat:has(.note) {
     grid-column: 1 / -1;
   }
 }
 
 /* Runs to the panel's edges. Chart.tsx insets its contents to match. */
 .widget-hero {
+  --plot-surface: var(--obsidian);
   margin: 0.15rem calc(var(--gutter) - var(--edge)) 0.46rem calc(var(--edge) * -1);
   padding: 0;
   background: none;
@@ -593,9 +604,14 @@ h2 {
   font-variant-numeric: lining-nums;
 }
 
-.widget-stat .readout {
+.widget-stat .readout,
+.widget-streak .readout {
   margin-top: 1.23rem;
   font-size: clamp(1.4rem, 27cqi, 2.2rem);
+}
+
+.widget-stat .note {
+  margin-top: 0.46rem;
 }
 
 .figure-unit {
@@ -722,6 +738,14 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+/* See PlotLabel in types.tsx. */
+.axis-label-halo {
+  fill: none;
+  stroke: var(--plot-surface);
+  stroke-width: 0.31rem;
+  stroke-linejoin: round;
+}
+
 .series-line {
   fill: none;
   stroke-width: 2;
@@ -733,6 +757,52 @@ h2 {
   stroke: var(--ivory-faint);
   stroke-width: 1;
   shape-rendering: crispEdges;
+}
+
+/* A limit against the clock, read like the power reserve on a watch: fine
+   graduations, one line, and the gap to even pace as the whole story. */
+
+.graduation {
+  stroke: var(--ivory-faint);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.pace-line {
+  stroke: var(--ivory-faint);
+  stroke-width: 1;
+  stroke-dasharray: 0.15rem 0.31rem;
+  stroke-linecap: round;
+}
+
+.pace-measured {
+  stroke: var(--champagne);
+}
+
+.pace-unmeasured {
+  stroke: var(--champagne);
+  opacity: 0.55;
+}
+
+.widget-pace .pulse-dot,
+.widget-pace .pulse-ring {
+  fill: var(--champagne);
+}
+
+.widget-pace .pulse-dot {
+  filter: drop-shadow(0 0 0.38rem rgba(216, 194, 154, 0.7));
+}
+
+.pace-outlook {
+  margin-top: 0.46rem;
+}
+
+.widget-hero .pace-outlook {
+  padding: 0 calc(var(--edge) - var(--gutter)) 0 var(--edge);
+}
+
+.pace-outlook-over {
+  color: var(--warning);
 }
 
 .pulse-dot {
@@ -850,6 +920,120 @@ h2 {
 
 .bar-slot:hover .bar {
   background: var(--ice);
+}
+
+.streak {
+  display: flex;
+  gap: 2px;
+  height: 0.62rem;
+  margin-top: 0.77rem;
+}
+
+.streak span {
+  flex: 1;
+  min-width: 0;
+  background: var(--hairline-strong);
+}
+
+.streak .streak-mark-reached {
+  background: var(--champagne);
+}
+
+.widget-streak .caption {
+  margin-top: 0.46rem;
+}
+
+/* Whole weeks across, so the grid is the same shape whatever the data holds. */
+.calendar,
+.calendar-months {
+  display: grid;
+  grid-template-columns: repeat(26, minmax(0, 1fr));
+  column-gap: 2px;
+}
+
+.calendar-months {
+  margin-top: 0.77rem;
+  font-size: 0.77rem;
+  color: var(--ivory-faint);
+  white-space: nowrap;
+}
+
+.calendar-months span {
+  grid-row: 1;
+  min-width: 0;
+}
+
+.calendar {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto);
+  row-gap: 2px;
+  margin-top: 0.31rem;
+}
+
+.calendar span {
+  aspect-ratio: 1;
+}
+
+.calendar-day {
+  border-radius: 2px;
+  background: var(--track);
+}
+
+.calendar-day[data-level="1"] {
+  background: color-mix(in srgb, var(--series-1) 30%, var(--charcoal));
+}
+
+.calendar-day[data-level="2"] {
+  background: color-mix(in srgb, var(--series-1) 55%, var(--charcoal));
+}
+
+.calendar-day[data-level="3"] {
+  background: var(--series-1);
+}
+
+.calendar-day[data-level="4"] {
+  background: var(--ice);
+}
+
+.calendar-day[data-today] {
+  box-shadow: 0 0 0 1px var(--champagne);
+}
+
+.calendar-day:hover {
+  outline: 1px solid var(--ivory);
+}
+
+/* Two figures across, parted by hairlines that only fall between them. */
+.records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.46rem;
+}
+
+.record {
+  padding: 0.77rem 0;
+}
+
+.record:nth-child(even) {
+  padding-left: 1.08rem;
+  border-left: 1px solid var(--hairline);
+}
+
+.record:nth-child(n + 3) {
+  border-top: 1px solid var(--hairline);
+}
+
+.record:nth-last-child(-n + 2) {
+  padding-bottom: 0.15rem;
+}
+
+.record .readout {
+  margin: 0;
+  font-size: clamp(1.4rem, 12cqi, 2.2rem);
+}
+
+.record .caption {
+  margin-top: 0.23rem;
 }
 
 .rows {
@@ -1069,7 +1253,8 @@ h2 {
 }
 
 @media (forced-colors: active) {
-  .series-line {
+  .series-line,
+  .pace-line {
     stroke: CanvasText;
   }
 }

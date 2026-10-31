@@ -1,5 +1,8 @@
 import type { Unit } from "./api";
 
+export const HOUR = 60 * 60 * 1000;
+export const DAY = 24 * HOUR;
+
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 
 export function formatBytes(bytes: number): string {
@@ -23,6 +26,7 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatCount(count: number): string {
+  if (count >= 1_000_000_000) return `${(count / 1_000_000_000).toFixed(1)}B`;
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${Math.round(count / 1_000)}K`;
   return `${Math.round(count)}`;
@@ -42,6 +46,8 @@ export function formatValue(unit: Unit, value: number): string {
       return `${Math.round(value)}°C`;
     case "count":
       return formatCount(value);
+    case "amount":
+      return Math.round(value).toLocaleString();
     case "timestamp":
       return formatShortAgo(value, Date.now());
   }

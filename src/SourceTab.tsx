@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { connectSource, getTab, onSourceChanged, refreshSource, type Tab } from "./api";
+import {
+  connectSource,
+  getTab,
+  onSourceChanged,
+  refreshSource,
+  type Tab,
+  type WidgetType,
+} from "./api";
 import { Fit } from "./Fit";
-import { formatAgo } from "./format";
-import { Colophon, WidgetView } from "./widgets";
+import { DAY, formatAgo, HOUR } from "./format";
+import { Colophon, isWidgetShown, WidgetView } from "./widgets";
 
 const MINUTE = 60 * 1000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 
 const RANGES = [
   { label: "15m", name: "15 minutes", ms: 15 * MINUTE },
@@ -14,6 +19,12 @@ const RANGES = [
   { label: "1d", name: "1 day", ms: DAY },
   { label: "1w", name: "1 week", ms: 7 * DAY },
 ];
+
+/** Widgets that can lead a tab, running to the panel's edges. */
+const HERO_TYPES: WidgetType[] = ["chart", "pace"];
+
+/** Widgets that follow the range control. A tab with none has no use for it. */
+const RANGED_TYPES: WidgetType[] = ["chart", "mirror_chart"];
 
 function useTab(sourceId: string) {
   const [tab, setTab] = useState<Tab | null>(null);
@@ -115,9 +126,12 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
   }
 
   const updatedAt = tab.values.reduce((latest, value) => Math.max(latest, value.fetched_at), 0);
-  const heroId = tab.widgets.find((widget) => widget.type === "chart")?.id;
   const colophon = tab.widgets.find((widget) => widget.type === "colophon");
-  const widgets = tab.widgets.filter((widget) => widget !== colophon);
+  const widgets = tab.widgets.filter(
+    (widget) => widget !== colophon && isWidgetShown(widget, tab),
+  );
+  const heroId = widgets.find((widget) => HERO_TYPES.includes(widget.type))?.id;
+  const usesRange = widgets.some((widget) => RANGED_TYPES.includes(widget.type));
 
   const selectedRange = RANGES.findIndex((range) => range.ms === rangeMs);
 
@@ -143,25 +157,27 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
               {updatedAt ? `Updated ${formatAgo(updatedAt, now)}` : "Waiting for the first reading"}
             </Fit>
           </p>
-          <div
-            className="segmented"
-            role="radiogroup"
-            aria-label="Chart range"
-            style={{ "--selected": selectedRange } as CSSProperties}
-          >
-            <span className="segmented-thumb" aria-hidden="true" />
-            {RANGES.map((range) => (
-              <button
-                key={range.ms}
-                role="radio"
-                aria-checked={range.ms === rangeMs}
-                aria-label={range.name}
-                onClick={() => setRangeMs(range.ms)}
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
+          {usesRange && (
+            <div
+              className="segmented"
+              role="radiogroup"
+              aria-label="Chart range"
+              style={{ "--selected": selectedRange } as CSSProperties}
+            >
+              <span className="segmented-thumb" aria-hidden="true" />
+              {RANGES.map((range) => (
+                <button
+                  key={range.ms}
+                  role="radio"
+                  aria-checked={range.ms === rangeMs}
+                  aria-label={range.name}
+                  onClick={() => setRangeMs(range.ms)}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 

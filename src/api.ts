@@ -8,16 +8,21 @@ export type Unit =
   | "seconds"
   | "celsius"
   | "count"
+  | "amount"
   | "timestamp";
 
 export type WidgetType =
   | "chart"
   | "mirror_chart"
+  | "pace"
   | "meter"
   | "stat"
   | "bars"
+  | "calendar"
+  | "streak"
   | "list"
   | "details"
+  | "records"
   | "colophon";
 
 export interface TabSummary {
