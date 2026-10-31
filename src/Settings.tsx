@@ -12,6 +12,7 @@ import {
   type TabSummary,
 } from "./api";
 import { Picker } from "./Picker";
+import { ShortcutRecorder } from "./ShortcutRecorder";
 
 interface TrayStat {
   source_id: string;
@@ -231,6 +232,7 @@ export function Settings({
               ]}
             />
           </li>
+          <ShortcutRecorder active={active} />
           <li className="setting">
             <div className="setting-text">
               <span>Keep Pulse ready</span>

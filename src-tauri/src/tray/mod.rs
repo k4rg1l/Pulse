@@ -22,6 +22,7 @@ use crate::api::AppState;
 
 pub mod icon;
 mod popover;
+pub mod shortcut;
 
 pub use popover::Anchor;
 use popover::{Bounds, Placement};
@@ -123,7 +124,7 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
                 ..
             } = event
             {
-                toggle_window(tray.app_handle(), rect);
+                toggle_window(tray.app_handle(), Some(rect));
             }
         })
         .build(app)?;
@@ -218,7 +219,8 @@ pub fn prepare_client(app: &AppHandle) {
     }
 }
 
-fn toggle_window(app: &AppHandle, icon: Rect) {
+/// Opens the popover, or closes it if it is already open.
+fn toggle_window(app: &AppHandle, icon: Option<Rect>) {
     if window(app).is_some_and(|window| window.is_visible().unwrap_or(false)) {
         close_window(app);
         return;
@@ -230,7 +232,7 @@ fn toggle_window(app: &AppHandle, icon: Rect) {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     if !closed_at.is_some_and(|at| at.elapsed() < REOPEN_GUARD) {
-        open_window(app, Some(icon));
+        open_window(app, icon);
     }
 }
 

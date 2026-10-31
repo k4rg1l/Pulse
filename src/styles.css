@@ -1199,6 +1199,89 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+/* The caption always has room for two lines, so the row holds its height as the
+   recorder's messages come and go. */
+.setting-shortcut {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
+}
+
+.setting-shortcut .caption {
+  min-height: 2.58rem;
+}
+
+.caption-problem {
+  color: var(--warning);
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: var(--control);
+  padding: 0.23rem 0.38rem;
+  border-radius: var(--radius-small);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.shortcut:hover {
+  background: var(--track);
+}
+
+/* The one moment on this page that is waiting on the person, so it alone glows. */
+.shortcut[data-recording] {
+  background: var(--graphite);
+  box-shadow:
+    0 0 0 1px rgba(216, 194, 154, 0.55),
+    0 0 1.1rem -0.3rem rgba(216, 194, 154, 0.5);
+  animation: shortcut-listening 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes shortcut-listening {
+  to {
+    box-shadow:
+      0 0 0 1px rgba(216, 194, 154, 0.25),
+      0 0 0.77rem -0.3rem rgba(216, 194, 154, 0.2);
+  }
+}
+
+.keycaps {
+  display: inline-flex;
+  gap: 0.23rem;
+}
+
+.keycaps-saved {
+  display: inline-flex;
+  animation: keycaps-saved 0.42s var(--ease-out);
+}
+
+@keyframes keycaps-saved {
+  from {
+    opacity: 0.4;
+    transform: translateY(0.15rem);
+  }
+}
+
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.69rem;
+  height: 1.69rem;
+  padding: 0 0.46rem;
+  border-radius: 0.38rem;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ivory);
+  background: linear-gradient(rgba(240, 234, 222, 0.11), rgba(240, 234, 222, 0.05));
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    0 0 0 1px var(--hairline),
+    0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
 .switch {
   display: flex;
   align-items: center;
@@ -1364,7 +1447,9 @@ h2 {
   }
 
   .pulse-ring,
-  .picker-menu {
+  .picker-menu,
+  .keycaps-saved,
+  .shortcut[data-recording] {
     animation: none;
   }
 }

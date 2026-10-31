@@ -15,7 +15,10 @@ use crate::{
     secrets,
     sources::{Metric, Setup, Source, Sources, Widget},
     store::{Setting, SourceError, Store, Value},
-    tray,
+    tray::{
+        self,
+        shortcut::{self, ShortcutStatus},
+    },
 };
 
 pub const SOURCE_CHANGED: &str = "source_changed";
@@ -155,6 +158,21 @@ pub fn update_setting(
         tray::refresh_stat(&app);
     }
     Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn get_shortcut(app: AppHandle) -> ShortcutStatus {
+    shortcut::status(&app)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn set_shortcut(shortcut: Option<String>, app: AppHandle) -> Result<ShortcutStatus, String> {
+    shortcut::set(&app, shortcut)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn pause_shortcut(paused: bool, app: AppHandle) -> Result<(), String> {
+    shortcut::pause(&app, paused)
 }
 
 #[tauri::command(async, rename_all = "snake_case")]

@@ -95,6 +95,12 @@ export interface ClientState {
   shown: boolean;
 }
 
+export interface ShortcutStatus {
+  shortcut: string | null;
+  /** False when another app holds the shortcut, so pressing it does nothing. */
+  registered: boolean;
+}
+
 export interface ApiKeyStatus {
   name: string;
   is_set: boolean;
@@ -132,7 +138,14 @@ export const getApiKeyStatus = (source_id: string) =>
 export const setApiKey = (source_id: string, name: string, value: string) =>
   invoke<void>("set_api_key", { source_id, name, value });
 
-export const onSourceChanged = (handler: (sourceId: string) => void): Promise<UnlistenFn> =>
+export const getShortcut = () => invoke<ShortcutStatus>("get_shortcut");
+
+export const setShortcut = (shortcut: string | null) =>
+  invoke<ShortcutStatus>("set_shortcut", { shortcut });
+
+export const pauseShortcut = (paused: boolean) => invoke<void>("pause_shortcut", { paused });
+
+export const onSourceChanged =(handler: (sourceId: string) => void): Promise<UnlistenFn> =>
   listen<string>("source_changed", (event) => handler(event.payload));
 
 export const onPopoverOpened = (handler: (anchor: Anchor | null) => void): Promise<UnlistenFn> =>

@@ -23,6 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             tray::open_window(app, None)
         }))
+        .plugin(tray::shortcut::plugin())
         .setup(|app| {
             secrets::init()?;
 
@@ -41,6 +42,7 @@ pub fn run() {
             let handle = app.handle().clone();
             tray::setup(&handle)?;
             tray::prepare_client(&handle);
+            tray::shortcut::register_saved(&handle);
 
             let on_change: OnChange = Arc::new(move |source_id| {
                 tray::source_changed(&handle, source_id);
@@ -70,6 +72,9 @@ pub fn run() {
             api::update_setting,
             api::get_api_key_status,
             api::set_api_key,
+            api::get_shortcut,
+            api::set_shortcut,
+            api::pause_shortcut,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Pulse")
