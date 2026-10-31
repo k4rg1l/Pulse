@@ -17,7 +17,7 @@ use tokio::{
     process::{Child, ChildStdin, ChildStdout, Command},
 };
 
-use super::CREATE_NO_WINDOW;
+use super::{CREATE_NO_WINDOW, path_folders};
 
 pub struct AppServer {
     /// Held so that the server ends when this is dropped, even mid-request.
@@ -104,11 +104,8 @@ impl AppServer {
 }
 
 /// The installed Codex, trying the desktop app first and then the command line.
-pub async fn find_codex() -> Option<PathBuf> {
-    match desktop_codex() {
-        Some(codex) => Some(codex),
-        None => command_line_codex().await,
-    }
+pub fn find_codex() -> Option<PathBuf> {
+    desktop_codex().or_else(command_line_codex)
 }
 
 fn subfolders(folder: &Path) -> Vec<PathBuf> {
@@ -135,28 +132,19 @@ fn desktop_codex() -> Option<PathBuf> {
         .max_by_key(|codex| fs::metadata(codex).and_then(|file| file.modified()).ok())
 }
 
-/// `where` finds the npm script rather than the program it runs, and ending a
-/// script would leave that program behind, so this finds the program itself.
-async fn command_line_codex() -> Option<PathBuf> {
-    let found = Command::new("where.exe")
-        .arg("codex")
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .await
-        .ok()?;
-
-    String::from_utf8_lossy(&found.stdout)
-        .lines()
-        .map(|line| PathBuf::from(line.trim()))
-        .find_map(|path| {
-            if path.extension().is_some_and(|extension| extension == "exe") {
-                Some(path)
-            } else {
-                npm_package_codex(path.parent()?)
-            }
-        })
+fn command_line_codex() -> Option<PathBuf> {
+    path_folders().into_iter().find_map(|folder| {
+        let program = folder.join("codex.exe");
+        if program.exists() {
+            Some(program)
+        } else {
+            npm_package_codex(&folder)
+        }
+    })
 }
 
+/// npm puts a script on PATH, and ending a script would leave the program it
+/// started running, so this finds the program itself.
 fn npm_package_codex(npm_folder: &Path) -> Option<PathBuf> {
     let packages = npm_folder.join("node_modules/@openai/codex/node_modules/@openai");
     subfolders(&packages)

@@ -16,30 +16,37 @@ use std::{
 
 use serde_json::{Map, Value as Json, json};
 
-use super::{CREATE_NO_WINDOW, Setup, SetupState};
+use super::{CREATE_NO_WINDOW, Setup, SetupState, Terms, data_file, path_folders};
 
 /// Passed by Claude Code to run this executable as the hook instead of the app.
 pub const HOOK_FLAG: &str = "--claude-status";
 
-const DATA_FOLDER: &str = "k4rg1l.pulse";
 const STATUS_FILE: &str = "claude-status.json";
 const ORIGINAL_FILE: &str = "claude-status-line-original.json";
 const BACKUP_SUFFIX: &str = ".pulse-backup";
 const STATUS_LINE: &str = "statusLine";
+
+const TERMS: Terms = Terms {
+    will: &[
+        "Add one command to Claude Code's settings, after backing them up",
+        "Save your limits each time Claude Code responds",
+        "Read your transcripts to count tokens by model",
+        "Keep those figures on this computer",
+    ],
+    never: &[
+        "See or store your Claude login",
+        "Keep the text of your conversations",
+        "Send anything off this computer",
+    ],
+    note: "Your existing status line keeps working. Disconnect at any time in Settings to \
+           restore your settings and clear these figures.",
+};
 
 pub fn claude_dir() -> Option<PathBuf> {
     if let Some(dir) = env::var_os("CLAUDE_CONFIG_DIR") {
         return Some(PathBuf::from(dir));
     }
     Some(Path::new(&env::var_os("USERPROFILE")?).join(".claude"))
-}
-
-fn data_file(name: &str) -> Option<PathBuf> {
-    Some(
-        Path::new(&env::var_os("APPDATA")?)
-            .join(DATA_FOLDER)
-            .join(name),
-    )
 }
 
 pub fn status_file() -> Option<PathBuf> {
@@ -90,35 +97,31 @@ fn write_settings(path: &Path, settings: &Map<String, Json>) -> Result<(), Strin
 }
 
 pub fn setup() -> Setup {
-    let (state, title, detail) = match current_state() {
+    let state = current_state();
+    let (title, detail) = match state {
         SetupState::Unavailable => (
-            SetupState::Unavailable,
             "Claude Code isn't installed",
             "Install Claude Code to see your usage here.",
         ),
         SetupState::Disconnected => (
-            SetupState::Disconnected,
             "Connect Claude Code",
-            "See your 5-hour and weekly limits here. Pulse adds one command to Claude \
-             Code's settings and never reads your Claude login.",
+            "Pulse reads your usage from what Claude Code keeps on this computer.",
         ),
         SetupState::Waiting => (
-            SetupState::Waiting,
             "Connected to Claude Code",
             "Your limits appear after Claude Code's next response.",
         ),
         SetupState::Connected => (
-            SetupState::Connected,
             "Claude Code",
             "Limits update while Claude Code is responding.",
         ),
     };
-    Setup {
-        state,
-        title,
-        detail,
-        action: "Connect",
-    }
+    Setup::new(state, title, detail, TERMS)
+}
+
+/// Whether the user has given Pulse permission to read Claude Code's files.
+pub fn is_connected() -> bool {
+    matches!(current_state(), SetupState::Waiting | SetupState::Connected)
 }
 
 fn current_state() -> SetupState {
@@ -237,24 +240,22 @@ fn run_original(payload: &[u8]) -> Option<Vec<u8>> {
     Some(child.wait_with_output().ok()?.stdout)
 }
 
+/// The first Git Bash on PATH. System32's bash is WSL, which cannot see Windows
+/// paths the same way.
+fn bash_on_path() -> Option<PathBuf> {
+    path_folders()
+        .into_iter()
+        .filter(|folder| !folder.to_string_lossy().to_lowercase().contains("system32"))
+        .map(|folder| folder.join("bash.exe"))
+        .find(|bash| bash.exists())
+}
+
 /// Status lines are written for Git Bash, so it is used when it is there.
 fn shell(command: &str) -> Command {
     let bash = env::var_os("CLAUDE_CODE_GIT_BASH_PATH")
         .map(PathBuf::from)
         .filter(|path| path.exists())
-        .or_else(|| {
-            let found = Command::new("where.exe")
-                .arg("bash")
-                .creation_flags(CREATE_NO_WINDOW)
-                .output()
-                .ok()?;
-            let text = String::from_utf8_lossy(&found.stdout).into_owned();
-            // System32's bash is WSL, which cannot see Windows paths the same way.
-            text.lines()
-                .map(str::trim)
-                .find(|line| !line.is_empty() && !line.to_lowercase().contains("system32"))
-                .map(PathBuf::from)
-        });
+        .or_else(bash_on_path);
 
     match bash {
         Some(bash) => {
@@ -263,7 +264,7 @@ fn shell(command: &str) -> Command {
             shell
         }
         None => {
-            let mut shell = Command::new("cmd");
+            let mut shell = Command::new(env::var_os("ComSpec").unwrap_or_else(|| "cmd".into()));
             shell.arg("/C").arg(command);
             shell
         }

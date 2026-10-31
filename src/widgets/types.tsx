@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { Tab, Widget } from "../api";
 import { Fit } from "../Fit";
 
@@ -35,32 +34,51 @@ export function Note({ text, end = true }: { text: string; end?: boolean }) {
   );
 }
 
-/**
- * A label drawn over a chart's data, with a halo of the surface behind it, so a
- * line passes behind the label the way a road breaks around a place name on a
- * map. The halo is its own layer because a browser paints each run of text
- * separately, and one run's outline would otherwise bite into the next.
- */
-export function PlotLabel({
-  x,
-  y,
-  anchor,
-  children,
-}: {
+/** A label that sits over a chart's data. */
+export interface PlotLabel {
   x: number;
   y: number;
+  text: string;
   anchor?: "end";
-  children: ReactNode;
+}
+
+function PlotLabelText({ label, className }: { label: PlotLabel; className: string }) {
+  return (
+    <text className={className} x={label.x} y={label.y} textAnchor={label.anchor}>
+      {label.text}
+    </text>
+  );
+}
+
+export function PlotLabels({ labels }: { labels: PlotLabel[] }) {
+  return labels.map((label) => (
+    <PlotLabelText key={label.text} label={label} className="axis-label" />
+  ));
+}
+
+/**
+ * Cuts the shape of each label out of whatever uses this mask, so a line breaks
+ * around a label the way a road breaks around a place name on a map. Only lines
+ * use it, which leaves any shading underneath them whole.
+ */
+export function PlotLabelMask({
+  id,
+  width,
+  height,
+  labels,
+}: {
+  id: string;
+  width: number;
+  height: number;
+  labels: PlotLabel[];
 }) {
   return (
-    <>
-      <text className="axis-label axis-label-halo" x={x} y={y} textAnchor={anchor}>
-        {children}
-      </text>
-      <text className="axis-label" x={x} y={y} textAnchor={anchor}>
-        {children}
-      </text>
-    </>
+    <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+      <rect width={width} height={height} fill="white" />
+      {labels.map((label) => (
+        <PlotLabelText key={label.text} label={label} className="axis-label axis-label-cutout" />
+      ))}
+    </mask>
   );
 }
 

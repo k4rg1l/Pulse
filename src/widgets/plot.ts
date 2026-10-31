@@ -10,6 +10,9 @@ import { getHistory } from "../api";
 
 const MAX_POINTS = 240;
 
+/** Reaches past the slowest source's interval, so a reading exists before the left edge. */
+const LEAD_IN = 3 * 60 * 1000;
+
 export interface Point {
   time: number;
   value: number;
@@ -21,7 +24,11 @@ interface History {
   to: number;
 }
 
-/** Each key's readings over the last `rangeMs`, read again whenever `version` rises. */
+/**
+ * Each key's readings over the last `rangeMs`, read again whenever `version` rises.
+ * The series also hold a little from before `from`, so that a slow source's line
+ * enters from the plot's edge instead of starting at its first reading inside it.
+ */
 export function useHistory(sourceId: string, keys: string[], rangeMs: number, version: number) {
   const [history, setHistory] = useState<History>({ series: keys.map(() => []), from: 0, to: 0 });
   const keyList = keys.join();
@@ -30,7 +37,8 @@ export function useHistory(sourceId: string, keys: string[], rangeMs: number, ve
     let current = true;
     const to = Date.now();
     const from = to - rangeMs;
-    Promise.all(keys.map((key) => getHistory(sourceId, key, from, to, MAX_POINTS)))
+    const leadIn = Math.max(LEAD_IN, (2 * rangeMs) / MAX_POINTS);
+    Promise.all(keys.map((key) => getHistory(sourceId, key, from - leadIn, to, MAX_POINTS)))
       .then((results) => {
         if (!current) return;
         setHistory({

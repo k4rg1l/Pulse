@@ -1,7 +1,15 @@
 import { Fit } from "../Fit";
 import { DAY, formatDayTime, formatDuration } from "../format";
 import { plotMargin, useHistory, usePointHover, useSize, useTooltipPlacement } from "./plot";
-import { Figure, Note, numberValue, PlotLabel, textValue, type WidgetProps } from "./types";
+import {
+  Figure,
+  Note,
+  numberValue,
+  PlotLabelMask,
+  PlotLabels,
+  textValue,
+  type WidgetProps,
+} from "./types";
 
 const GRID_PERCENTS = [0, 50, 100];
 
@@ -96,6 +104,15 @@ export function Pace({ widget, tab, version, hero }: WidgetProps) {
   const paceLabelY = y(100) + rem;
   const paceLabelClearing = ((1.5 * rem) / innerHeight) * windowMs;
   const paceLabelX = x(resetsAt - paceLabelClearing) - 0.46 * rem;
+  const labels = [
+    ...GRID_PERCENTS.filter((percent) => percent > 0).map((percent) => ({
+      x: margin.textLeft,
+      y: y(percent) + rem,
+      text: `${percent}%`,
+    })),
+    { x: paceLabelX, y: paceLabelY, text: "Even pace", anchor: "end" as const },
+  ];
+  const labelMask = `url(#labels-${widget.id})`;
 
   return (
     <>
@@ -128,6 +145,12 @@ export function Pace({ widget, tab, version, hero }: WidgetProps) {
                 <stop offset="0" stopColor="var(--champagne)" stopOpacity="0.22" />
                 <stop offset="1" stopColor="var(--champagne)" stopOpacity="0" />
               </linearGradient>
+              <PlotLabelMask
+                id={`labels-${widget.id}`}
+                width={width}
+                height={height}
+                labels={labels}
+              />
             </defs>
 
             {GRID_PERCENTS.map((percent) => (
@@ -161,7 +184,14 @@ export function Pace({ widget, tab, version, hero }: WidgetProps) {
               </g>
             ))}
 
-            <line className="pace-line" x1={x(start)} y1={y(0)} x2={x(resetsAt)} y2={y(100)} />
+            <line
+              className="pace-line"
+              x1={x(start)}
+              y1={y(0)}
+              x2={x(resetsAt)}
+              y2={y(100)}
+              mask={labelMask}
+            />
 
             <path
               d={`M ${x(start)},${y(0)} L ${line} L ${x(now)},${y(0)} Z`}
@@ -171,17 +201,11 @@ export function Pace({ widget, tab, version, hero }: WidgetProps) {
             <path
               className="series-line pace-unmeasured"
               d={`M ${x(start)},${y(0)} L ${x(first.time)},${y(first.value)}`}
+              mask={labelMask}
             />
-            <path className="series-line pace-measured" d={`M ${line}`} />
+            <path className="series-line pace-measured" d={`M ${line}`} mask={labelMask} />
 
-            {GRID_PERCENTS.filter((percent) => percent > 0).map((percent) => (
-              <PlotLabel key={percent} x={margin.textLeft} y={y(percent) + rem}>
-                {percent}%
-              </PlotLabel>
-            ))}
-            <PlotLabel x={paceLabelX} y={paceLabelY} anchor="end">
-              Even pace
-            </PlotLabel>
+            <PlotLabels labels={labels} />
 
             {hero && !hovered && (
               <g transform={`translate(${x(now)} ${y(used)})`}>

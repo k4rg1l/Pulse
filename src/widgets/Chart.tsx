@@ -10,7 +10,15 @@ import {
   useTooltipPlacement,
   type Point,
 } from "./plot";
-import { Figure, Note, numberValue, PlotLabel, textValue, type WidgetProps } from "./types";
+import {
+  Figure,
+  Note,
+  numberValue,
+  PlotLabelMask,
+  PlotLabels,
+  textValue,
+  type WidgetProps,
+} from "./types";
 
 const SERIES_COLORS = ["var(--series-1)", "var(--series-2)"];
 
@@ -48,9 +56,13 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
   const innerHeight = Math.max(0, height - MARGIN.top - MARGIN.bottom);
 
+  const inRange = useMemo(
+    () => series.map((points) => points.filter((point) => point.time >= from)),
+    [series, from],
+  );
   const yMax = useMemo(
-    () => niceMax(unit, Math.max(0, ...series.flat().map((point) => point.value))),
-    [series, unit],
+    () => niceMax(unit, Math.max(0, ...inRange.flat().map((point) => point.value))),
+    [inRange, unit],
   );
 
   const x = (time: number) => MARGIN.left + ((time - from) / (to - from || 1)) * innerWidth;
@@ -78,8 +90,11 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
         labelY: y(yMax * fraction) + rem,
       }));
 
-  const lead = series[0] ?? [];
-  const hasData = series.some((points) => points.length >= 2);
+  const labels = gridLines.flatMap((line) =>
+    line.label ? [{ x: MARGIN.textLeft, y: line.labelY, text: line.label }] : [],
+  );
+  const lead = inRange[0] ?? [];
+  const hasData = inRange.some((points) => points.length >= 2);
   const { hovered, plotEvents } = usePointHover(
     lead,
     (offsetX) => from + ((offsetX - MARGIN.left) / innerWidth) * (to - from),
@@ -145,6 +160,15 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
                   <stop offset="0" stopColor="var(--series-1)" stopOpacity="0.2" />
                   <stop offset="1" stopColor="var(--series-1)" stopOpacity="0" />
                 </linearGradient>
+                <clipPath id={`plot-${widget.id}`}>
+                  <rect x={MARGIN.left} y={0} width={innerWidth} height={height} />
+                </clipPath>
+                <PlotLabelMask
+                  id={`labels-${widget.id}`}
+                  width={width}
+                  height={height}
+                  labels={labels}
+                />
               </defs>
 
               {gridLines.map((line) => (
@@ -170,38 +194,36 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
                 Now
               </text>
 
-              {series.map((points, index) =>
-                segments(points).map((segment) => {
-                  const line = segment.map((p) => `${x(p.time)},${y(p.value, index)}`).join(" L ");
-                  const start = x(segment[0].time);
-                  const end = x(segment[segment.length - 1].time);
-                  return (
-                    <g key={`${index}-${segment[0].time}`}>
-                      {(mirrored || series.length === 1) && (
+              <g clipPath={`url(#plot-${widget.id})`}>
+                {series.map((points, index) =>
+                  segments(points).map((segment) => {
+                    const line = segment
+                      .map((p) => `${x(p.time)},${y(p.value, index)}`)
+                      .join(" L ");
+                    const start = x(segment[0].time);
+                    const end = x(segment[segment.length - 1].time);
+                    return (
+                      <g key={`${index}-${segment[0].time}`}>
+                        {(mirrored || series.length === 1) && (
+                          <path
+                            d={`M ${start},${baseline} L ${line} L ${end},${baseline} Z`}
+                            fill={mirrored ? SERIES_COLORS[index] : `url(#fill-${widget.id})`}
+                            fillOpacity={mirrored ? 0.16 : undefined}
+                          />
+                        )}
                         <path
-                          d={`M ${start},${baseline} L ${line} L ${end},${baseline} Z`}
-                          fill={mirrored ? SERIES_COLORS[index] : `url(#fill-${widget.id})`}
-                          fillOpacity={mirrored ? 0.16 : undefined}
+                          className="series-line"
+                          d={`M ${line}`}
+                          stroke={SERIES_COLORS[index]}
+                          mask={`url(#labels-${widget.id})`}
                         />
-                      )}
-                      <path
-                        className="series-line"
-                        d={`M ${line}`}
-                        stroke={SERIES_COLORS[index]}
-                      />
-                    </g>
-                  );
-                }),
-              )}
+                      </g>
+                    );
+                  }),
+                )}
+              </g>
 
-              {gridLines.map(
-                (line) =>
-                  line.label && (
-                    <PlotLabel key={line.y} x={MARGIN.textLeft} y={line.labelY}>
-                      {line.label}
-                    </PlotLabel>
-                  ),
-              )}
+              <PlotLabels labels={labels} />
 
               {hero && lead.length > 0 && !hovered && (
                 <g transform={`translate(${x(lead[lead.length - 1].time)} ${y(lead[lead.length - 1].value)})`}>

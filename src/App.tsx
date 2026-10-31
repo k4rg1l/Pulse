@@ -165,7 +165,7 @@ export default function App() {
                 </div>
               ))}
               <div hidden={selected !== SETTINGS}>
-                <Settings tabs={tabs} active={selected === SETTINGS} />
+                <Settings tabs={tabs} active={selected === SETTINGS} onOpenTab={setSelected} />
               </div>
             </main>
           </div>

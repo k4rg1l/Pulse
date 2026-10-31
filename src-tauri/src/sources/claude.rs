@@ -1,7 +1,8 @@
 //! Claude subscription usage, from files Claude Code leaves on this machine.
 //!
 //! This source never reads the Claude login. Anthropic does not allow other apps
-//! to use Claude.ai tokens, and there is no public usage endpoint, so it uses:
+//! to use Claude.ai tokens, and there is no public usage endpoint, so it uses the
+//! following, and reads neither until the user has connected it:
 //!
 //! - Limits: `claude_status_line` connects Claude Code's status line, which saves
 //!   them to a file. That file only changes while Claude Code is responding.
@@ -27,6 +28,20 @@ const FIVE_HOURS: i64 = 5 * 60 * 60;
 const SEVEN_DAYS: i64 = 7 * 24 * 60 * 60;
 
 const MODELS_SHOWN: usize = 4;
+
+const LIMIT_KEYS: [&str; 5] = [
+    "claude.five_hour.usage",
+    "claude.five_hour.resets_at",
+    "claude.seven_day.usage",
+    "claude.seven_day.resets_at",
+    "claude.limits_as_of",
+];
+
+const TOKEN_KEYS: [&str; 3] = [
+    "claude.tokens.five_hour",
+    "claude.tokens.seven_day",
+    "claude.models",
+];
 
 #[derive(Default)]
 pub struct ClaudeUsage;
@@ -141,7 +156,18 @@ impl Source for ClaudeUsage {
     }
 }
 
+/// Blanks for the given keys, which is how a tab loses its figures.
+fn cleared(keys: &[&str]) -> Vec<Reading> {
+    keys.iter()
+        .map(|key| Reading::current_only(key, Json::Null))
+        .collect()
+}
+
 fn read_usage() -> Result<Vec<Reading>, String> {
+    if !claude_status_line::is_connected() {
+        return Ok(cleared(&[LIMIT_KEYS.as_slice(), &TOKEN_KEYS].concat()));
+    }
+
     let now = now_seconds();
     let mut readings = read_limits(now);
 
@@ -182,20 +208,11 @@ struct LimitWindow {
     resets_at: i64,
 }
 
-/// Readings for both limit windows. With no status file they are cleared, so
-/// that disconnecting leaves no old figures behind. A half-written file is
-/// skipped until the next run.
+/// Readings for both limit windows, blank until the first status file arrives.
+/// A half-written file is skipped until the next run.
 fn read_limits(now: i64) -> Vec<Reading> {
     let Some(path) = claude_status_line::status_file().filter(|path| path.exists()) else {
-        return [
-            "claude.five_hour.usage",
-            "claude.five_hour.resets_at",
-            "claude.seven_day.usage",
-            "claude.seven_day.resets_at",
-            "claude.limits_as_of",
-        ]
-        .map(|key| Reading::current_only(key, Json::Null))
-        .into();
+        return cleared(&LIMIT_KEYS);
     };
 
     let Some(limits) = fs::read(&path)

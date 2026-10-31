@@ -55,11 +55,18 @@ export interface SourceError {
   occurred_at: number;
 }
 
+export interface Terms {
+  will: string[];
+  never: string[];
+  note: string;
+}
+
 export interface Setup {
   state: "unavailable" | "disconnected" | "waiting" | "connected";
   title: string;
   detail: string;
   action: string;
+  terms: Terms | null;
 }
 
 export interface Tab {

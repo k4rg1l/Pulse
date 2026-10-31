@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import {
-  connectSource,
-  getTab,
-  onSourceChanged,
-  refreshSource,
-  type Tab,
-  type WidgetType,
-} from "./api";
+import { getTab, onSourceChanged, refreshSource, type Tab, type WidgetType } from "./api";
 import { Fit } from "./Fit";
 import { DAY, formatAgo, HOUR } from "./format";
+import { SetupCard } from "./SetupCard";
 import { Colophon, isWidgetShown, WidgetView } from "./widgets";
 
 const MINUTE = 60 * 1000;
@@ -78,32 +72,6 @@ function RefreshIcon() {
   );
 }
 
-function SetupCard({ tab }: { tab: Tab }) {
-  const [failure, setFailure] = useState<string | null>(null);
-  const setup = tab.setup;
-  if (!setup || setup.state === "connected") return null;
-
-  function connect() {
-    connectSource(tab.source_id)
-      .then(() => setFailure(null))
-      .catch((error) => setFailure(String(error)));
-  }
-
-  return (
-    <div className="setup-card">
-      <div>
-        <h2>{setup.title}</h2>
-        <p className="caption">{failure ?? setup.detail}</p>
-      </div>
-      {setup.state === "disconnected" && (
-        <button className="button button-primary" onClick={connect}>
-          {setup.action}
-        </button>
-      )}
-    </div>
-  );
-}
-
 interface SourceTabProps {
   sourceId: string;
   /** False while another tab is showing. Tabs stay mounted, so switching is instant. */
@@ -126,14 +94,20 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
   }
 
   const updatedAt = tab.values.reduce((latest, value) => Math.max(latest, value.fetched_at), 0);
+  // Until a source is connected the terms are the whole page, with nothing empty below.
+  const disconnected = tab.setup?.state === "disconnected";
   const colophon = tab.widgets.find((widget) => widget.type === "colophon");
-  const widgets = tab.widgets.filter(
-    (widget) => widget !== colophon && isWidgetShown(widget, tab),
-  );
+  const widgets = disconnected
+    ? []
+    : tab.widgets.filter((widget) => widget !== colophon && isWidgetShown(widget, tab));
   const heroId = widgets.find((widget) => HERO_TYPES.includes(widget.type))?.id;
   const usesRange = widgets.some((widget) => RANGED_TYPES.includes(widget.type));
 
   const selectedRange = RANGES.findIndex((range) => range.ms === rangeMs);
+  const freshness = updatedAt
+    ? `Updated ${formatAgo(updatedAt, now)}`
+    : "Waiting for the first reading";
+  const status = disconnected ? "Not connected" : freshness;
 
   return (
     <>
@@ -153,9 +127,7 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
         </div>
         <div className="page-meta">
           <p className="caption">
-            <Fit>
-              {updatedAt ? `Updated ${formatAgo(updatedAt, now)}` : "Waiting for the first reading"}
-            </Fit>
+            <Fit>{status}</Fit>
           </p>
           {usesRange && (
             <div
@@ -211,7 +183,7 @@ export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
         ))}
       </div>
 
-      {colophon && <Colophon widget={colophon} tab={tab} />}
+      {colophon && !disconnected && <Colophon widget={colophon} tab={tab} />}
     </>
   );
 }

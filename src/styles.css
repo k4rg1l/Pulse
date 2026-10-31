@@ -524,6 +524,90 @@ h2 {
   color: var(--ivory);
 }
 
+/* The terms of connecting, set like a page of a good contract: one serif title,
+   quiet lettering, and hairlines doing the work. Always selectable, because
+   people should be able to quote what they agreed to. */
+.connect-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1.08rem;
+  padding: 1.38rem;
+  border-radius: var(--radius);
+  background: var(--graphite);
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    inset 0 1px 0 rgba(240, 234, 222, 0.04);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.connect-sheet h2 {
+  font-family: var(--serif);
+  font-size: 1.77rem;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+}
+
+.connect-sheet header p {
+  margin-top: 0.38rem;
+  color: var(--ivory-soft);
+}
+
+.terms-group {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.terms-group h3 {
+  font-weight: 400;
+}
+
+.terms-group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.46rem;
+  margin-top: 0.62rem;
+}
+
+.terms-item {
+  display: grid;
+  grid-template-columns: 0.77rem minmax(0, 1fr);
+  gap: 0.62rem;
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+/* Sits on the first line of the text beside it, however many lines that runs to. */
+.terms-glyph {
+  width: 0.77rem;
+  height: 0.77rem;
+  margin-top: 0.27rem;
+  fill: none;
+  stroke: var(--ivory-faint);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.terms-glyph-will {
+  stroke: var(--champagne);
+}
+
+.connect-note {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ivory-soft);
+}
+
+.connect-sheet .button {
+  width: 100%;
+  user-select: none;
+}
+
 .banner {
   box-shadow:
     0 0 0 1px var(--hairline),
@@ -550,7 +634,6 @@ h2 {
 }
 
 .widget {
-  --plot-surface: var(--charcoal);
   container-type: inline-size;
   grid-column: 1 / -1;
   min-width: 0;
@@ -587,7 +670,6 @@ h2 {
 
 /* Runs to the panel's edges. Chart.tsx insets its contents to match. */
 .widget-hero {
-  --plot-surface: var(--obsidian);
   margin: 0.15rem calc(var(--gutter) - var(--edge)) 0.46rem calc(var(--edge) * -1);
   padding: 0;
   background: none;
@@ -738,10 +820,10 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
-/* See PlotLabel in types.tsx. */
-.axis-label-halo {
-  fill: none;
-  stroke: var(--plot-surface);
+/* See PlotLabelMask in types.tsx. */
+.axis-label-cutout {
+  fill: black;
+  stroke: black;
   stroke-width: 0.31rem;
   stroke-linejoin: round;
 }

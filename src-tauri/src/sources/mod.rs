@@ -4,7 +4,13 @@
 //! A source only fetches. It never touches the store, the client, or another
 //! source. The scheduler decides when it runs and what happens to the result.
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use async_trait::async_trait;
 use serde::Serialize;
@@ -21,6 +27,28 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Stops a console window flashing when a source starts another program.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+const DATA_FOLDER: &str = "k4rg1l.pulse";
+
+/// The folders on PATH that are safe to run a program from. `where` also searches
+/// the current folder, and a relative entry can point at it, so a stray file there
+/// could run in place of the real program. Neither is used.
+fn path_folders() -> Vec<PathBuf> {
+    env::var_os("PATH").map_or_else(Vec::new, |path| {
+        env::split_paths(&path)
+            .filter(|folder| folder.is_absolute())
+            .collect()
+    })
+}
+
+/// A file in Pulse's data folder, for sources that keep something between runs.
+fn data_file(name: &str) -> Option<PathBuf> {
+    Some(
+        Path::new(&env::var_os("APPDATA")?)
+            .join(DATA_FOLDER)
+            .join(name),
+    )
+}
 
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -101,6 +129,15 @@ pub enum SetupState {
     Connected,
 }
 
+/// What a user agrees to by connecting a source. Every line is a promise, so each
+/// must stay true of the code behind it.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Terms {
+    pub will: &'static [&'static str],
+    pub never: &'static [&'static str],
+    pub note: &'static str,
+}
+
 /// A one-time step a source needs from the user, shown on its tab and in Settings.
 #[derive(Clone, Debug, Serialize)]
 pub struct Setup {
@@ -108,6 +145,20 @@ pub struct Setup {
     pub title: &'static str,
     pub detail: &'static str,
     pub action: &'static str,
+    /// Shown only while the source can be connected.
+    pub terms: Option<Terms>,
+}
+
+impl Setup {
+    fn new(state: SetupState, title: &'static str, detail: &'static str, terms: Terms) -> Self {
+        Self {
+            state,
+            title,
+            detail,
+            action: "Connect",
+            terms: matches!(state, SetupState::Disconnected).then_some(terms),
+        }
+    }
 }
 
 /// One value produced by a run.

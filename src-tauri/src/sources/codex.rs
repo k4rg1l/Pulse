@@ -1,10 +1,14 @@
 //! Codex usage, read through Codex's own app server.
 //!
-//! Unlike Claude there is nothing to connect: if Codex is installed and signed
-//! in with ChatGPT, this works. See `codex_app_server` for how it talks to Codex.
+//! Pulse only starts Codex once the user has connected it. Connecting changes
+//! nothing in Codex. It records the user's permission in `CONNECTED_FILE`, and
+//! disconnecting removes that file. See `codex_app_server` for how it talks to Codex.
 
 use std::{
     collections::HashMap,
+    fs,
+    io::ErrorKind,
+    path::PathBuf,
     sync::{Mutex, MutexGuard},
     time::Duration,
 };
@@ -17,8 +21,9 @@ use time::{Date, OffsetDateTime};
 use crate::scheduler::now_ms;
 
 use super::{
-    Metric, Reading, Setup, SetupState, Source, Unit, Widget, WidgetType,
+    Metric, Reading, Setup, SetupState, Source, Terms, Unit, Widget, WidgetType,
     codex_app_server::{AppServer, find_codex},
+    data_file,
 };
 
 /// Each run is a real request to OpenAI, so this is slower than the local sources.
@@ -51,10 +56,29 @@ const KEYS: &[&str] = &[
     "codex.plan",
 ];
 
+/// Its existence is the user's permission to start Codex.
+const CONNECTED_FILE: &str = "codex-connected";
+
+const TERMS: Terms = Terms {
+    will: &[
+        "Run Codex in the background every 2 minutes",
+        "Read your limits, credits and daily token totals",
+        "Keep those figures on this computer",
+    ],
+    never: &[
+        "See or store your Codex login",
+        "Read your conversations or code",
+        "Change Codex's settings",
+        "Spend your credits or free resets",
+    ],
+    note: "Each read is a request from Codex to OpenAI. Disconnect at any time in Settings \
+           to stop reading and clear these figures.",
+};
+
 #[derive(Clone, Copy, Default)]
 enum Login {
-    /// Before the first run. Nothing is shown, so a working tab never flashes a
-    /// setup card as Pulse starts.
+    /// Before the first run after connecting. A connected tab shows no card here,
+    /// so a working one never flashes a setup card as Pulse starts.
     #[default]
     Unknown,
     NotInstalled,
@@ -76,6 +100,14 @@ impl CodexUsage {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+}
+
+fn connected_file() -> Result<PathBuf, String> {
+    data_file(CONNECTED_FILE).ok_or_else(|| "Could not find Pulse's data folder".to_owned())
+}
+
+fn is_connected() -> bool {
+    connected_file().is_ok_and(|file| file.exists())
 }
 
 #[async_trait]
@@ -198,37 +230,62 @@ impl Source for CodexUsage {
         ]
     }
 
-    /// There is no step Pulse can take here, so a working source shows nothing
-    /// and never offers to disconnect.
     fn setup(&self) -> Option<Setup> {
-        let (title, detail) = match *self.login() {
-            Login::Unknown | Login::ChatGpt => return None,
-            Login::NotInstalled => (
+        let login = *self.login();
+        let (state, title, detail) = match (login, is_connected()) {
+            (Login::NotInstalled, _) => (
+                SetupState::Unavailable,
                 "Codex isn't installed",
                 "Install Codex to see your usage here.",
             ),
-            Login::SignedOut => (
+            (_, false) => (
+                SetupState::Disconnected,
+                "Connect Codex",
+                "Pulse reads your usage through Codex on this computer.",
+            ),
+            (Login::Unknown | Login::ChatGpt, true) => (
+                SetupState::Connected,
+                "Codex",
+                "Usage updates every 2 minutes.",
+            ),
+            (Login::SignedOut, true) => (
+                SetupState::Waiting,
                 "Sign in to Codex",
                 "Pulse uses Codex's own sign-in and never sees your login.",
             ),
-            Login::ApiKey => (
+            (Login::ApiKey, true) => (
+                SetupState::Waiting,
                 "Codex is using an API key",
                 "Limits and tokens come with a ChatGPT sign-in, so sign in to Codex with ChatGPT.",
             ),
         };
-        Some(Setup {
-            state: SetupState::Unavailable,
-            title,
-            detail,
-            action: "",
-        })
+        Some(Setup::new(state, title, detail, TERMS))
+    }
+
+    fn connect(&self) -> Result<(), String> {
+        *self.login() = Login::Unknown;
+        fs::write(connected_file()?, "").map_err(|e| format!("Could not connect Codex: {e}"))
+    }
+
+    fn disconnect(&self) -> Result<(), String> {
+        *self.login() = Login::Unknown;
+        match fs::remove_file(connected_file()?) {
+            Err(e) if e.kind() != ErrorKind::NotFound => {
+                Err(format!("Could not disconnect Codex: {e}"))
+            }
+            _ => Ok(()),
+        }
     }
 
     async fn run(&self, _api_keys: HashMap<String, String>) -> Result<Vec<Reading>, String> {
-        let Some(codex) = find_codex().await else {
+        let Some(codex) = find_codex() else {
             *self.login() = Login::NotInstalled;
             return Ok(cleared());
         };
+        if !is_connected() {
+            *self.login() = Login::Unknown;
+            return Ok(cleared());
+        }
 
         let mut server = AppServer::start(&codex).await?;
         let reply: AccountReply = server

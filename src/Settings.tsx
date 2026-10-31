@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  connectSource,
   disconnectSource,
   getApiKeyStatus,
   getSettings,
@@ -76,7 +75,15 @@ function ApiKeyRow({
   );
 }
 
-export function Settings({ tabs, active }: { tabs: TabSummary[]; active: boolean }) {
+export function Settings({
+  tabs,
+  active,
+  onOpenTab,
+}: {
+  tabs: TabSummary[];
+  active: boolean;
+  onOpenTab: (sourceId: string) => void;
+}) {
   const [sources, setSources] = useState<SourceOptions[]>([]);
   const [trayStat, setTrayStat] = useState<TrayStat>(DEFAULT_TRAY_STAT);
   const [defaultTab, setDefaultTab] = useState<string>("");
@@ -131,8 +138,8 @@ export function Settings({ tabs, active }: { tabs: TabSummary[]; active: boolean
     save("default_tab", sourceId);
   }
 
-  function changeConnection(sourceId: string, connected: boolean) {
-    (connected ? disconnectSource(sourceId) : connectSource(sourceId))
+  function disconnect(sourceId: string) {
+    disconnectSource(sourceId)
       .then(loadSources)
       .catch((error) => setFailure(String(error)));
   }
@@ -209,11 +216,14 @@ export function Settings({ tabs, active }: { tabs: TabSummary[]; active: boolean
                       <span>{tab.name}</span>
                       <span className="caption">{connected ? "Connected" : "Not connected"}</span>
                     </div>
+                    {/* Connecting happens on the tab, where the terms are, never here. */}
                     <button
                       className="button"
-                      onClick={() => changeConnection(tab.source_id, connected)}
+                      onClick={() =>
+                        connected ? disconnect(tab.source_id) : onOpenTab(tab.source_id)
+                      }
                     >
-                      {connected ? "Disconnect" : setup?.action}
+                      {connected ? "Disconnect" : "Review"}
                     </button>
                   </li>
                 );
