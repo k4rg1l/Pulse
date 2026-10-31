@@ -2,6 +2,7 @@ mod api;
 mod scheduler;
 mod secrets;
 mod sources;
+mod startup;
 mod store;
 mod tray;
 
@@ -24,6 +25,7 @@ pub fn run() {
             tray::open_window(app, None)
         }))
         .plugin(tray::shortcut::plugin())
+        .plugin(startup::plugin())
         .setup(|app| {
             secrets::init()?;
 
@@ -41,8 +43,8 @@ pub fn run() {
 
             let handle = app.handle().clone();
             tray::setup(&handle)?;
-            tray::prepare_client(&handle);
             tray::shortcut::register_saved(&handle);
+            startup::run(&handle);
 
             let on_change: OnChange = Arc::new(move |source_id| {
                 tray::source_changed(&handle, source_id);
@@ -75,6 +77,8 @@ pub fn run() {
             api::get_shortcut,
             api::set_shortcut,
             api::pause_shortcut,
+            api::get_start_at_login,
+            api::set_start_at_login,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Pulse")

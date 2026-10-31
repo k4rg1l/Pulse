@@ -11,10 +11,11 @@ use serde_json::Value as Json;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::{
-    scheduler::Scheduler,
+    scheduler::{Scheduler, now_ms},
     secrets,
     sources::{Metric, Setup, Source, Sources, Widget},
-    store::{Setting, SourceError, Store, Value},
+    startup,
+    store::{HISTORY_DAYS_SETTING, Setting, SourceError, Store, Value},
     tray::{
         self,
         shortcut::{self, ShortcutStatus},
@@ -157,7 +158,20 @@ pub fn update_setting(
     if key == tray::TRAY_STAT_SETTING {
         tray::refresh_stat(&app);
     }
+    if key == HISTORY_DAYS_SETTING {
+        state.store.prune_history(now_ms()).map_err(message)?;
+    }
     Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn get_start_at_login(app: AppHandle) -> bool {
+    startup::starts_at_login(&app)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn set_start_at_login(on: bool, app: AppHandle) -> Result<(), String> {
+    startup::set_starts_at_login(&app, on)
 }
 
 #[tauri::command(async, rename_all = "snake_case")]

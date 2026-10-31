@@ -40,6 +40,12 @@ const SCHEMA: &str = "
     ) WITHOUT ROWID;
 ";
 
+pub const HISTORY_DAYS_SETTING: &str = "history_days";
+
+/// Matches DEFAULT_HISTORY_DAYS in src/Settings.tsx.
+const DEFAULT_HISTORY_DAYS: i64 = 14;
+const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
+
 const EVENT_ERROR: &str = "error";
 const EVENT_RECOVERED: &str = "recovered";
 
@@ -231,6 +237,19 @@ impl Store {
             params![source_id, kind, message, at],
         )?;
         Ok(())
+    }
+
+    /// Removes history older than the user chose to keep. Freed space is reused by
+    /// new readings, so the file stops growing rather than shrinking.
+    pub fn prune_history(&self, now: i64) -> Result<usize> {
+        let days = self
+            .setting(HISTORY_DAYS_SETTING)?
+            .and_then(|days| days.as_i64())
+            .unwrap_or(DEFAULT_HISTORY_DAYS);
+        self.conn().execute(
+            "DELETE FROM history WHERE fetched_at < ?1",
+            [now - days * MS_PER_DAY],
+        )
     }
 
     pub fn settings(&self) -> Result<Vec<Setting>> {

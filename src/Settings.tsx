@@ -3,8 +3,10 @@ import {
   disconnectSource,
   getApiKeyStatus,
   getSettings,
+  getStartAtLogin,
   getTab,
   setApiKey,
+  setStartAtLogin,
   updateSetting,
   type ApiKeyStatus,
   type Metric,
@@ -27,6 +29,15 @@ interface SourceOptions {
 }
 
 const DEFAULT_TRAY_STAT: TrayStat = { source_id: "system", key: "cpu.usage" };
+
+/** Matches DEFAULT_HISTORY_DAYS in src-tauri/src/store.rs. */
+const DEFAULT_HISTORY_DAYS = 14;
+
+const HISTORY_LENGTHS = [
+  { value: "7", label: "1 week" },
+  { value: "14", label: "2 weeks" },
+  { value: "30", label: "30 days" },
+];
 
 const statId = ({ source_id, key }: TrayStat) => `${source_id}/${key}`;
 
@@ -111,6 +122,8 @@ export function Settings({
   const [trayStat, setTrayStat] = useState<TrayStat>(DEFAULT_TRAY_STAT);
   const [defaultTab, setDefaultTab] = useState<string>("");
   const [keepReady, setKeepReady] = useState(false);
+  const [startAtLogin, setStartsAtLogin] = useState(false);
+  const [historyDays, setHistoryDays] = useState(DEFAULT_HISTORY_DAYS);
   const [failure, setFailure] = useState<string | null>(null);
 
   function loadSources() {
@@ -138,8 +151,12 @@ export function Settings({
           if (key === "tray_stat") setTrayStat(value as TrayStat);
           if (key === "default_tab") setDefaultTab(value as string);
           if (key === "keep_client_ready") setKeepReady(value === true);
+          if (key === "history_days") setHistoryDays(value as number);
         }
       })
+      .catch((error) => setFailure(String(error)));
+    getStartAtLogin()
+      .then(setStartsAtLogin)
       .catch((error) => setFailure(String(error)));
   }, []);
 
@@ -166,6 +183,17 @@ export function Settings({
   function chooseKeepReady(on: boolean) {
     setKeepReady(on);
     save("keep_client_ready", on);
+  }
+
+  function chooseStartAtLogin(on: boolean) {
+    setStartAtLogin(on)
+      .then(() => setStartsAtLogin(on))
+      .catch((error) => setFailure(String(error)));
+  }
+
+  function chooseHistoryDays(days: string) {
+    setHistoryDays(Number(days));
+    save("history_days", Number(days));
   }
 
   function disconnect(sourceId: string) {
@@ -241,6 +269,25 @@ export function Settings({
               </span>
             </div>
             <Switch label="Keep Pulse ready" on={keepReady} onChange={chooseKeepReady} />
+          </li>
+          <li className="setting">
+            <div className="setting-text">
+              <span>Start at login</span>
+              <span className="caption">Pulse starts quietly with Windows.</span>
+            </div>
+            <Switch label="Start at login" on={startAtLogin} onChange={chooseStartAtLogin} />
+          </li>
+          <li className="setting">
+            <div className="setting-text">
+              <span>Keep history</span>
+              <span className="caption">How far back charts can reach.</span>
+            </div>
+            <Picker
+              label="Keep history"
+              value={String(historyDays)}
+              onChange={chooseHistoryDays}
+              groups={[{ options: HISTORY_LENGTHS }]}
+            />
           </li>
         </ul>
 

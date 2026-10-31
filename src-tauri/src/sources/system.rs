@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
     thread,
     time::{Duration, Instant},
 };
@@ -14,6 +14,8 @@ use super::{Metric, Reading, Source, Unit, Widget, WidgetType};
 
 const INTERVAL: Duration = Duration::from_secs(5);
 
+const GPU_KEY_PREFIX: &str = "gpu.";
+
 /// CPU load and network speed are differences between two samples, so unlike
 /// other sources this one has to keep its OS counters between runs. It holds
 /// no results: the first run after a start takes its own baseline.
@@ -21,6 +23,18 @@ const INTERVAL: Duration = Duration::from_secs(5);
 pub struct SystemResources {
     /// Created by the first run, so that a failure is reported like any other.
     sampler: Arc<Mutex<Option<Sampler>>>,
+    /// Checked once. Graphics hardware does not change while Pulse runs.
+    has_supported_gpu: OnceLock<bool>,
+}
+
+impl SystemResources {
+    /// GPU figures come from NVML, which only NVIDIA hardware provides. Without it
+    /// the GPU widgets and metrics are left out, rather than sitting empty.
+    fn has_supported_gpu(&self) -> bool {
+        *self.has_supported_gpu.get_or_init(|| {
+            Nvml::init().is_ok_and(|nvml| nvml.device_count().is_ok_and(|count| count > 0))
+        })
+    }
 }
 
 #[async_trait]
@@ -38,7 +52,7 @@ impl Source for SystemResources {
     }
 
     fn widgets(&self) -> Vec<Widget> {
-        vec![
+        let mut widgets = vec![
             Widget {
                 id: "cpu",
                 kind: WidgetType::Chart,
@@ -109,11 +123,15 @@ impl Source for SystemResources {
                 keys: &["system.machine"],
                 note: None,
             },
-        ]
+        ];
+        if !self.has_supported_gpu() {
+            widgets.retain(|widget| !widget.keys[0].starts_with(GPU_KEY_PREFIX));
+        }
+        widgets
     }
 
     fn metrics(&self) -> Vec<Metric> {
-        vec![
+        let mut metrics = vec![
             Metric {
                 key: "cpu.usage",
                 label: "CPU",
@@ -169,7 +187,11 @@ impl Source for SystemResources {
                 label: "Uptime",
                 unit: Unit::Seconds,
             },
-        ]
+        ];
+        if !self.has_supported_gpu() {
+            metrics.retain(|metric| !metric.key.starts_with(GPU_KEY_PREFIX));
+        }
+        metrics
     }
 
     async fn run(&self, _api_keys: HashMap<String, String>) -> Result<Vec<Reading>, String> {

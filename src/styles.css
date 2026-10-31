@@ -529,6 +529,36 @@ h2 {
   color: var(--ivory);
 }
 
+.welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--gap);
+  margin-bottom: 1.08rem;
+  padding: 1.08rem 0.77rem 1.08rem 1.23rem;
+  border-radius: var(--radius);
+  background: var(--graphite);
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    inset 0 1px 0 rgba(240, 234, 222, 0.04);
+}
+
+.welcome h2 {
+  font-family: var(--serif);
+  font-size: 1.38rem;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--ivory);
+}
+
+.welcome-how {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.31rem 0.38rem;
+  margin-top: 0.62rem;
+}
+
 /* The terms of connecting, set like a page of a good contract: one serif title,
    quiet lettering, and hairlines doing the work. Always selectable, because
    people should be able to quote what they agreed to. */

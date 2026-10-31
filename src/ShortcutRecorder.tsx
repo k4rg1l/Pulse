@@ -47,7 +47,8 @@ function rejectionOf(event: KeyboardEvent): string | null {
   return null;
 }
 
-function Keycaps({ parts }: { parts: string[] }) {
+/** A shortcut drawn as the keys on a keyboard. */
+export function Keycaps({ parts }: { parts: string[] }) {
   return (
     <span className="keycaps">
       {parts.map((part) => (

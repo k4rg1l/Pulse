@@ -10,16 +10,21 @@ import {
 import {
   clientReady,
   getSettings,
+  getShortcut,
   listTabs,
   onPopoverClosing,
   onPopoverOpened,
+  updateSetting,
   type Anchor,
+  type ShortcutStatus,
   type TabSummary,
 } from "./api";
 import { Settings } from "./Settings";
 import { SourceTab } from "./SourceTab";
+import { WelcomeCard } from "./WelcomeCard";
 
 const SETTINGS = "settings";
+const WELCOME_DISMISSED_SETTING = "welcome_dismissed";
 
 const dismiss = () => getCurrentWindow().close();
 
@@ -85,6 +90,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<string[]>([]);
+  const [welcome, setWelcome] = useState<ShortcutStatus | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const onLoaded = useCallback((sourceId: string) => {
@@ -96,11 +102,13 @@ export default function App() {
   const { anchor, open } = usePopover(ready);
 
   useEffect(() => {
-    Promise.all([listTabs(), getSettings()])
-      .then(([tabs, settings]) => {
+    Promise.all([listTabs(), getSettings(), getShortcut()])
+      .then(([tabs, settings, shortcut]) => {
         const preferred = settings.find((setting) => setting.key === "default_tab")?.value;
         const known = tabs.some((tab) => tab.source_id === preferred);
+        const dismissed = settings.some((setting) => setting.key === WELCOME_DISMISSED_SETTING);
         setTabs(tabs);
+        setWelcome(dismissed ? null : shortcut);
         setSelected(known ? (preferred as string) : (tabs[0]?.source_id ?? SETTINGS));
       })
       .catch((error) => setFailure(String(error)));
@@ -109,6 +117,11 @@ export default function App() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [selected]);
+
+  function dismissWelcome() {
+    setWelcome(null);
+    updateSetting(WELCOME_DISMISSED_SETTING, true);
+  }
 
   function onStagePress(event: MouseEvent) {
     // The margin around the panel belongs to this window, so a click there never
@@ -155,6 +168,7 @@ export default function App() {
           <div className="panel-scroll" ref={scrollRef}>
             <main className="content">
               {failure && <p className="notice">Pulse could not start: {failure}</p>}
+              {welcome && <WelcomeCard shortcut={welcome} onDismiss={dismissWelcome} />}
               {tabs.map((tab) => (
                 <div key={tab.source_id} hidden={selected !== tab.source_id}>
                   <SourceTab

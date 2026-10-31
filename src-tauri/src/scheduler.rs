@@ -4,7 +4,7 @@
 use std::{
     collections::HashMap,
     sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use tokio::{sync::Notify, time};
@@ -22,6 +22,8 @@ const RETRY_MAX: Duration = Duration::from_secs(15 * 60);
 /// clock between two checks means it just woke up.
 const WAKE_CHECK: Duration = Duration::from_secs(10);
 const WAKE_GAP: Duration = Duration::from_secs(30);
+
+const PRUNE_EVERY: Duration = Duration::from_secs(60 * 60);
 
 /// Told the source ID after every run, whether it succeeded or failed.
 pub type OnChange = Arc<dyn Fn(&str) + Send + Sync>;
@@ -58,7 +60,8 @@ impl Scheduler {
             .for_each(|trigger| trigger.notify_one());
     }
 
-    /// Starts every source and then watches for the computer waking up.
+    /// Starts every source, then watches for the computer waking up and keeps
+    /// history within the length the user chose.
     pub async fn run(self: Arc<Self>, sources: Sources, store: Arc<Store>, on_change: OnChange) {
         for source in sources {
             let trigger = self.triggers[source.id()].clone();
@@ -71,7 +74,15 @@ impl Scheduler {
         }
 
         let mut last_check = SystemTime::now();
+        let mut last_prune = None;
         loop {
+            if last_prune.is_none_or(|at: Instant| at.elapsed() >= PRUNE_EVERY) {
+                if let Err(e) = store.prune_history(now_ms()) {
+                    eprintln!("could not prune history: {e}");
+                }
+                last_prune = Some(Instant::now());
+            }
+
             time::sleep(WAKE_CHECK).await;
             let now = SystemTime::now();
             if now

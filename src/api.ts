@@ -138,6 +138,10 @@ export const getApiKeyStatus = (source_id: string) =>
 export const setApiKey = (source_id: string, name: string, value: string) =>
   invoke<void>("set_api_key", { source_id, name, value });
 
+export const getStartAtLogin = () => invoke<boolean>("get_start_at_login");
+
+export const setStartAtLogin = (on: boolean) => invoke<void>("set_start_at_login", { on });
+
 export const getShortcut = () => invoke<ShortcutStatus>("get_shortcut");
 
 export const setShortcut = (shortcut: string | null) =>
