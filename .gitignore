@@ -23,5 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# Agent instructions
-AGENTS.md
+# Markdown
+*.md
