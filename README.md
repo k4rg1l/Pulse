@@ -12,7 +12,7 @@ Pulse sits in your Windows tray and shows your computer, your Claude limits and 
 
 Installing needs no admin rights. Pulse opens by itself the first time, then lives in your tray. Press `Ctrl` `Alt` `P` to open it from anywhere.
 
-Windows may show a SmartScreen notice because Pulse is a new app. Choose **More info**, then **Run anyway**.
+Windows may show a SmartScreen notice because Pulse is a new app. Choose **More info**, then **Run anyway**. You can check your download against its [SHA-256 checksum](https://github.com/k4rg1l/Pulse/releases/latest/download/Pulse-setup.exe.sha256).
 
 ## What it shows
 

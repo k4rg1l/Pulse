@@ -14,26 +14,26 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to exact commits, because this job builds what people install and
+      # can write to the repository, and a tag can be moved to different code.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: lts/*
           cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
-          workspaces: src-tauri
+          toolchain: stable
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,11 +44,17 @@ jobs:
           releaseDraft: true
 
       # The website links to the latest release by this name, which never changes.
-      - name: Attach the installer under a permanent name
+      # Only a draft is touched, so a rerun can never replace what people download.
+      - name: Attach the installer under a permanent name, with its checksum
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.tauri.outputs.appVersion }}
         run: |
+          if [ "$(gh release view "v$VERSION" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "v$VERSION is already published, so its files were left alone."
+            exit 1
+          fi
           cp src-tauri/target/release/bundle/nsis/*-setup.exe Pulse-setup.exe
-          gh release upload "v$VERSION" Pulse-setup.exe --clobber
+          sha256sum Pulse-setup.exe > Pulse-setup.exe.sha256
+          gh release upload "v$VERSION" Pulse-setup.exe Pulse-setup.exe.sha256 --clobber
