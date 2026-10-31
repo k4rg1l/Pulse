@@ -72,7 +72,11 @@ pub struct Placement {
 }
 
 fn clamp_between(value: f64, low: f64, high: f64) -> f64 {
-    if low > high { (low + high) / 2.0 } else { value.clamp(low, high) }
+    if low > high {
+        (low + high) / 2.0
+    } else {
+        value.clamp(low, high)
+    }
 }
 
 /// Places the window for a tray icon, both in physical pixels, on a monitor with
@@ -131,5 +135,13 @@ pub fn place(icon: Bounds, work_area: Bounds, scale: f64) -> Placement {
     let edge = (MARGIN + NOTCH_INSET) * scale;
     let offset = clamp_between(along, edge, length - edge) / scale;
 
-    Placement { window: Bounds { x, y, width, height }, anchor: Anchor { side, offset } }
+    Placement {
+        window: Bounds {
+            x,
+            y,
+            width,
+            height,
+        },
+        anchor: Anchor { side, offset },
+    }
 }

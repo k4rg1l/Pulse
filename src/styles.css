@@ -616,6 +616,7 @@ h2 {
   pointer-events: none;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .tooltip-time {
@@ -735,6 +736,35 @@ h2 {
   color: var(--ivory-soft);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.details {
+  margin-top: 6px;
+}
+
+.detail {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+
+.detail + .detail {
+  border-top: 1px solid var(--hairline);
+}
+
+.detail dt {
+  flex: none;
+  color: var(--ivory-soft);
+}
+
+.detail dd {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Settings */

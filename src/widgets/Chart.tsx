@@ -6,6 +6,7 @@ import { Figure, numberValue, type WidgetProps } from "./types";
 const MAX_POINTS = 240;
 const DAY = 24 * 60 * 60 * 1000;
 const SERIES_COLORS = ["var(--series-1)", "var(--series-2)"];
+const MIRROR_GAP = 1.5;
 
 interface Point {
   time: number;
@@ -93,7 +94,8 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const MARGIN = hero
     ? { top: 10, right: 20, bottom: 20, left: 20 }
     : { top: 8, right: 2, bottom: 20, left: 2 };
-  const height = hero ? 148 : 104;
+  const mirrored = widget.type === "mirror_chart";
+  const height = hero ? 148 : mirrored ? 140 : 104;
   const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
   const innerHeight = height - MARGIN.top - MARGIN.bottom;
 
@@ -103,8 +105,29 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   );
 
   const x = (time: number) => MARGIN.left + ((time - from) / (to - from || 1)) * innerWidth;
-  const y = (value: number) => MARGIN.top + (1 - Math.min(value, yMax) / yMax) * innerHeight;
-  const baseline = y(0);
+  const bottom = MARGIN.top + innerHeight;
+  const center = MARGIN.top + innerHeight / 2;
+  const y = (value: number, seriesIndex = 0) => {
+    const fraction = Math.min(value, yMax) / yMax;
+    if (!mirrored) return bottom - fraction * innerHeight;
+    // Each side starts just off the centre line, so that both stay visible at zero.
+    const reach = MIRROR_GAP + fraction * (innerHeight / 2 - MIRROR_GAP);
+    return center + (seriesIndex === 0 ? -reach : reach);
+  };
+  const baseline = mirrored ? center : bottom;
+
+  const maxLabel = formatValue(unit, yMax);
+  const gridLines = mirrored
+    ? [
+        { y: MARGIN.top, label: maxLabel, labelY: MARGIN.top + 13 },
+        { y: center },
+        { y: bottom, label: maxLabel, labelY: bottom - 5 },
+      ]
+    : [0, 0.5, 1].map((fraction) => ({
+        y: y(yMax * fraction),
+        label: fraction > 0 ? formatValue(unit, yMax * fraction) : undefined,
+        labelY: y(yMax * fraction) + 13,
+      }));
 
   const lead = series[0] ?? [];
   const hasData = series.some((points) => points.length >= 2);
@@ -133,7 +156,9 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const headline = latest(metrics[0]);
 
   const timeLabel = rangeMs > DAY ? formatDayTime : (t: number) => formatClock(t, false);
-  const tooltipLeft = hovered ? Math.max(8, Math.min(x(hovered.time) + 12, width - 148)) : 0;
+  // The tooltip takes the side with more room, away from the data under the cursor.
+  const hoverX = hovered ? x(hovered.time) : 0;
+  const tooltipSide = hoverX > width / 2 ? { right: width - hoverX + 12 } : { left: hoverX + 12 };
 
   return (
     <>
@@ -183,18 +208,18 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
                 </linearGradient>
               </defs>
 
-              {[0, 0.5, 1].map((fraction) => (
-                <g key={fraction}>
+              {gridLines.map((line) => (
+                <g key={line.y}>
                   <line
                     className="grid-line"
                     x1={MARGIN.left}
                     x2={width - MARGIN.right}
-                    y1={y(yMax * fraction)}
-                    y2={y(yMax * fraction)}
+                    y1={line.y}
+                    y2={line.y}
                   />
-                  {fraction > 0 && (
-                    <text className="axis-label" x={MARGIN.left} y={y(yMax * fraction) + 13}>
-                      {formatValue(unit, yMax * fraction)}
+                  {line.label && (
+                    <text className="axis-label" x={MARGIN.left} y={line.labelY}>
+                      {line.label}
                     </text>
                   )}
                 </g>
@@ -209,15 +234,16 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
 
               {series.map((points, index) =>
                 segments(points).map((segment) => {
-                  const line = segment.map((p) => `${x(p.time)},${y(p.value)}`).join(" L ");
+                  const line = segment.map((p) => `${x(p.time)},${y(p.value, index)}`).join(" L ");
                   const start = x(segment[0].time);
                   const end = x(segment[segment.length - 1].time);
                   return (
                     <g key={`${index}-${segment[0].time}`}>
-                      {series.length === 1 && (
+                      {(mirrored || series.length === 1) && (
                         <path
                           d={`M ${start},${baseline} L ${line} L ${end},${baseline} Z`}
-                          fill={`url(#fill-${widget.id})`}
+                          fill={mirrored ? SERIES_COLORS[index] : `url(#fill-${widget.id})`}
+                          fillOpacity={mirrored ? 0.16 : undefined}
                         />
                       )}
                       <path
@@ -243,7 +269,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
                   x1={x(hovered.time)}
                   x2={x(hovered.time)}
                   y1={MARGIN.top}
-                  y2={baseline}
+                  y2={bottom}
                 />
               )}
             </svg>
@@ -251,7 +277,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
         )}
 
         {hovered && (
-          <div className="tooltip" style={{ left: tooltipLeft }}>
+          <div className="tooltip" style={tooltipSide}>
             <p className="tooltip-time">{formatClock(hovered.time, rangeMs <= DAY)}</p>
             {series.map((points, index) => {
               const point = points.reduce<Point | null>(

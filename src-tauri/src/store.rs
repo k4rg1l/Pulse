@@ -77,11 +77,15 @@ impl Store {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.execute_batch(SCHEMA)?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     fn conn(&self) -> std::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Saves one run atomically, so the UI never sees half a run.
@@ -102,7 +106,9 @@ impl Store {
             for reading in readings {
                 let value = reading.value.to_string();
                 current.execute(params![source_id, reading.key, value, fetched_at])?;
-                history.execute(params![source_id, reading.key, value, fetched_at])?;
+                if reading.keep_history {
+                    history.execute(params![source_id, reading.key, value, fetched_at])?;
+                }
             }
         }
         tx.commit()
@@ -207,10 +213,12 @@ impl Store {
              WHERE source_id = ?1 ORDER BY id DESC LIMIT 1",
             [source_id],
             |row| {
-                Ok((row.get::<_, String>(0)? == EVENT_ERROR).then_some(SourceError {
-                    message: row.get(1)?,
-                    occurred_at: row.get(2)?,
-                }))
+                Ok(
+                    (row.get::<_, String>(0)? == EVENT_ERROR).then_some(SourceError {
+                        message: row.get(1)?,
+                        occurred_at: row.get(2)?,
+                    }),
+                )
             },
         )
         .optional()
@@ -229,7 +237,10 @@ impl Store {
         let conn = self.conn();
         let mut statement = conn.prepare_cached("SELECT key, value FROM settings ORDER BY key")?;
         let rows = statement.query_map([], |row| {
-            Ok(Setting { key: row.get(0)?, value: parse(row.get(1)?) })
+            Ok(Setting {
+                key: row.get(0)?,
+                value: parse(row.get(1)?),
+            })
         })?;
         rows.collect()
     }
@@ -237,7 +248,9 @@ impl Store {
     pub fn setting(&self, key: &str) -> Result<Option<Json>> {
         let value: Option<String> = self
             .conn()
-            .query_row("SELECT value FROM settings WHERE key = ?1", [key], |row| row.get(0))
+            .query_row("SELECT value FROM settings WHERE key = ?1", [key], |row| {
+                row.get(0)
+            })
             .optional()?;
         Ok(value.map(parse))
     }

@@ -18,7 +18,9 @@ pub fn run() {
     tauri::Builder::default()
         // Two servers would write to the same database, so a second launch
         // opens the window of the first and exits.
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| tray::open_window(app, None)))
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            tray::open_window(app, None)
+        }))
         .setup(|app| {
             secrets::init()?;
 
@@ -69,7 +71,10 @@ pub fn run() {
         .run(|_, event| {
             // With no window open Pulse keeps running. Only Quit, which sets an
             // exit code, ends it.
-            if let RunEvent::ExitRequested { code: None, api, .. } = event {
+            if let RunEvent::ExitRequested {
+                code: None, api, ..
+            } = event
+            {
                 api.prevent_exit();
             }
         });

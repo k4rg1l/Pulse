@@ -106,12 +106,37 @@ function List({ widget, tab }: WidgetProps) {
   );
 }
 
+interface DetailRow {
+  label: string;
+  value: string;
+}
+
+function Details({ widget, tab }: WidgetProps) {
+  const raw = rawValue(tab, widget.keys[0]);
+  const rows = (Array.isArray(raw) ? raw : []) as DetailRow[];
+  return (
+    <>
+      <h2>{widget.title}</h2>
+      <dl className="details">
+        {rows.map((row) => (
+          <div className="detail" key={row.label}>
+            <dt>{row.label}</dt>
+            <dd title={row.value}>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </>
+  );
+}
+
 const WIDGETS: Record<WidgetType, ComponentType<WidgetProps>> = {
   chart: Chart,
+  mirror_chart: Chart,
   meter: Meter,
   stat: Stat,
   bars: Bars,
   list: List,
+  details: Details,
 };
 
 export function WidgetView(props: WidgetProps) {

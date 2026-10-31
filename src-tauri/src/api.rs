@@ -32,7 +32,8 @@ impl AppState {
     }
 
     fn require_source(&self, source_id: &str) -> Result<&Arc<dyn Source>, String> {
-        self.source(source_id).ok_or_else(|| format!("Unknown source: {source_id}"))
+        self.source(source_id)
+            .ok_or_else(|| format!("Unknown source: {source_id}"))
     }
 }
 
@@ -72,7 +73,10 @@ pub fn list_tabs(state: State<'_, AppState>) -> Vec<TabSummary> {
     state
         .sources
         .iter()
-        .map(|source| TabSummary { source_id: source.id(), name: source.name() })
+        .map(|source| TabSummary {
+            source_id: source.id(),
+            name: source.name(),
+        })
         .collect()
 }
 
@@ -98,7 +102,10 @@ pub fn get_history(
     max_points: Option<u32>,
     state: State<'_, AppState>,
 ) -> Result<Vec<Value>, String> {
-    state.store.history(&source_id, &key, from, to, max_points).map_err(message)
+    state
+        .store
+        .history(&source_id, &key, from, to, max_points)
+        .map_err(message)
 }
 
 #[tauri::command(async, rename_all = "snake_case")]
@@ -141,7 +148,12 @@ pub fn get_api_key_status(
     source
         .api_keys()
         .iter()
-        .map(|&name| Ok(ApiKeyStatus { name, is_set: secrets::is_set(source.id(), name)? }))
+        .map(|&name| {
+            Ok(ApiKeyStatus {
+                name,
+                is_set: secrets::is_set(source.id(), name)?,
+            })
+        })
         .collect()
 }
 
@@ -154,7 +166,10 @@ pub fn set_api_key(
 ) -> Result<(), String> {
     let source = state.require_source(&source_id)?;
     if !source.api_keys().contains(&name.as_str()) {
-        return Err(format!("{} does not use a key called {name}", source.name()));
+        return Err(format!(
+            "{} does not use a key called {name}",
+            source.name()
+        ));
     }
     secrets::set(source.id(), &name, &value)?;
     state.scheduler.refresh(source.id());

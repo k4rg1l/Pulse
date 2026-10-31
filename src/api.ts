@@ -1,9 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-export type Unit = "percent" | "bytes" | "bytes_per_second" | "seconds";
+export type Unit = "percent" | "bytes" | "bytes_per_second" | "seconds" | "celsius";
 
-export type WidgetType = "chart" | "meter" | "stat" | "bars" | "list";
+export type WidgetType =
+  | "chart"
+  | "mirror_chart"
+  | "meter"
+  | "stat"
+  | "bars"
+  | "list"
+  | "details";
 
 export interface TabSummary {
   source_id: string;

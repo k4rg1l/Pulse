@@ -59,7 +59,10 @@ struct TrayStat {
 
 impl Default for TrayStat {
     fn default() -> Self {
-        Self { source_id: "system".to_owned(), key: "cpu.usage".to_owned() }
+        Self {
+            source_id: "system".to_owned(),
+            key: "cpu.usage".to_owned(),
+        }
     }
 }
 
@@ -136,11 +139,16 @@ pub fn refresh_stat(app: &AppHandle) {
     let state = app.state::<AppState>();
     let stat = chosen_stat(app);
 
-    let metric = state
-        .source(&stat.source_id)
-        .and_then(|source| source.metrics().into_iter().find(|metric| metric.key == stat.key));
+    let metric = state.source(&stat.source_id).and_then(|source| {
+        source
+            .metrics()
+            .into_iter()
+            .find(|metric| metric.key == stat.key)
+    });
     let Some(metric) = metric else { return };
-    let Ok(Some(value)) = state.store.current_number(&stat.source_id, &stat.key) else { return };
+    let Ok(Some(value)) = state.store.current_number(&stat.source_id, &stat.key) else {
+        return;
+    };
 
     let text = icon::short_text(metric.unit, value);
     let level = icon::level(metric.unit, value);
@@ -148,13 +156,20 @@ pub fn refresh_stat(app: &AppHandle) {
     let shown = (text.clone(), level.map(|level| (level * 100.0) as u8));
 
     let tray_state = app.state::<TrayState>();
-    let mut last = tray_state.shown.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut last = tray_state
+        .shown
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     if last.as_ref() == Some(&shown) {
         return;
     }
 
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        let tooltip = format!("Pulse: {} {}", metric.label, icon::long_text(metric.unit, value));
+        let tooltip = format!(
+            "Pulse: {} {}",
+            metric.label,
+            icon::long_text(metric.unit, value)
+        );
         let _ = tray.set_icon(Some(tile(&text, level)));
         let _ = tray.set_tooltip(Some(tooltip));
         *last = Some(shown);
@@ -172,7 +187,10 @@ fn toggle_window(app: &AppHandle, icon: Rect) {
     }
 
     let state = app.state::<TrayState>();
-    let closed_at = *state.closed_at.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let closed_at = *state
+        .closed_at
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     if !closed_at.is_some_and(|at| at.elapsed() < REOPEN_GUARD) {
         open_window(app, Some(icon));
     }
@@ -181,7 +199,12 @@ fn toggle_window(app: &AppHandle, icon: Rect) {
 fn bounds_of(rect: Rect, scale: f64) -> Bounds {
     let position = rect.position.to_physical::<f64>(scale);
     let size = rect.size.to_physical::<f64>(scale);
-    Bounds { x: position.x, y: position.y, width: size.width, height: size.height }
+    Bounds {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+    }
 }
 
 /// Works out where the popover goes for this icon. Without a click to go on, it
@@ -190,7 +213,9 @@ fn placement(app: &AppHandle, icon: Option<Rect>) -> Option<Placement> {
     let icon = icon.or_else(|| app.tray_by_id(TRAY_ID)?.rect().ok().flatten());
     let monitor = icon.and_then(|rect| {
         let position = rect.position.to_physical::<f64>(1.0);
-        app.monitor_from_point(position.x, position.y).ok().flatten()
+        app.monitor_from_point(position.x, position.y)
+            .ok()
+            .flatten()
     });
     let monitor = monitor.or_else(|| app.primary_monitor().ok().flatten())?;
 
@@ -209,17 +234,27 @@ fn placement(app: &AppHandle, icon: Option<Rect>) -> Option<Placement> {
         height: 24.0 * scale,
     };
 
-    Some(popover::place(icon.map_or(corner, |rect| bounds_of(rect, scale)), work_area, scale))
+    Some(popover::place(
+        icon.map_or(corner, |rect| bounds_of(rect, scale)),
+        work_area,
+        scale,
+    ))
 }
 
 fn present(app: &AppHandle, window: &WebviewWindow, placement: Option<Placement>) {
-    if let Some(Placement { window: bounds, anchor }) = placement {
+    if let Some(Placement {
+        window: bounds,
+        anchor,
+    }) = placement
+    {
         let position = PhysicalPosition::new(bounds.x.round() as i32, bounds.y.round() as i32);
         let size = PhysicalSize::new(bounds.width.round() as u32, bounds.height.round() as u32);
         let _ = window.set_position(position);
         let _ = window.set_size(size);
-        *app.state::<TrayState>().anchor.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
-            Some(anchor);
+        *app.state::<TrayState>()
+            .anchor
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(anchor);
     }
 
     let _ = window.show();
@@ -232,7 +267,11 @@ fn present(app: &AppHandle, window: &WebviewWindow, placement: Option<Placement>
 /// starts, which would read as a click elsewhere and dismiss the popover.
 pub fn client_ready(app: &AppHandle) -> Option<Anchor> {
     let state = app.state::<TrayState>();
-    let pending = state.pending.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
+    let pending = state
+        .pending
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .take();
     if let (Some(placement), Some(window)) = (pending, window(app)) {
         present(app, &window, placement);
     }
@@ -240,13 +279,18 @@ pub fn client_ready(app: &AppHandle) -> Option<Anchor> {
 }
 
 fn current_anchor(app: &AppHandle) -> Option<Anchor> {
-    *app.state::<TrayState>().anchor.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    *app.state::<TrayState>()
+        .anchor
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Shows the popover beside the icon, starting a new client if there is none.
 /// With no icon position given, it uses wherever the tray says the icon is.
 pub fn open_window(app: &AppHandle, icon: Option<Rect>) {
-    app.state::<TrayState>().window_generation.fetch_add(1, Ordering::SeqCst);
+    app.state::<TrayState>()
+        .window_generation
+        .fetch_add(1, Ordering::SeqCst);
     let placement = placement(app, icon);
 
     if let Some(window) = window(app) {
@@ -254,8 +298,10 @@ pub fn open_window(app: &AppHandle, icon: Option<Rect>) {
         return;
     }
 
-    *app.state::<TrayState>().pending.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
-        Some(placement);
+    *app.state::<TrayState>()
+        .pending
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(placement);
 
     // Creating a webview from an event handler deadlocks on Windows, because
     // both wait on the main thread. A separate task avoids that.
@@ -294,14 +340,20 @@ pub fn close_window(app: &AppHandle) {
     }
 
     let state = app.state::<TrayState>();
-    *state.closed_at.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Instant::now());
+    *state
+        .closed_at
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Instant::now());
     let generation = state.window_generation.fetch_add(1, Ordering::SeqCst) + 1;
     let _ = app.emit(POPOVER_CLOSING, ());
 
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let superseded = |app: &AppHandle| {
-            app.state::<TrayState>().window_generation.load(Ordering::SeqCst) != generation
+            app.state::<TrayState>()
+                .window_generation
+                .load(Ordering::SeqCst)
+                != generation
         };
 
         tokio::time::sleep(FADE_OUT).await;

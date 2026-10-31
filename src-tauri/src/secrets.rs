@@ -37,7 +37,9 @@ pub fn load(source_id: &str, names: &[&str]) -> HashMap<String, String> {
     names
         .iter()
         .filter_map(|&name| {
-            let value = entry(source_id, name).and_then(|entry| entry.get_password()).ok()?;
+            let value = entry(source_id, name)
+                .and_then(|entry| entry.get_password())
+                .ok()?;
             Some((name.to_owned(), value))
         })
         .collect()

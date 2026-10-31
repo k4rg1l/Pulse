@@ -53,21 +53,31 @@ impl Scheduler {
     }
 
     fn refresh_all(&self) {
-        self.triggers.values().for_each(|trigger| trigger.notify_one());
+        self.triggers
+            .values()
+            .for_each(|trigger| trigger.notify_one());
     }
 
     /// Starts every source and then watches for the computer waking up.
     pub async fn run(self: Arc<Self>, sources: Sources, store: Arc<Store>, on_change: OnChange) {
         for source in sources {
             let trigger = self.triggers[source.id()].clone();
-            tokio::spawn(source_loop(source, trigger, store.clone(), on_change.clone()));
+            tokio::spawn(source_loop(
+                source,
+                trigger,
+                store.clone(),
+                on_change.clone(),
+            ));
         }
 
         let mut last_check = SystemTime::now();
         loop {
             time::sleep(WAKE_CHECK).await;
             let now = SystemTime::now();
-            if now.duration_since(last_check).is_ok_and(|gap| gap > WAKE_GAP) {
+            if now
+                .duration_since(last_check)
+                .is_ok_and(|gap| gap > WAKE_GAP)
+            {
                 self.refresh_all();
             }
             last_check = now;
@@ -85,7 +95,10 @@ async fn source_loop(
     let mut failures = 0;
 
     loop {
-        match run_once(&source).await.and_then(|readings| save(&store, id, &readings)) {
+        match run_once(&source)
+            .await
+            .and_then(|readings| save(&store, id, &readings))
+        {
             Ok(()) => failures = 0,
             Err(message) => {
                 failures += 1;
@@ -115,7 +128,10 @@ async fn run_once(source: &Arc<dyn Source>) -> Result<Vec<Reading>, String> {
         Ok(Err(_)) => Err(format!("{} stopped unexpectedly", source.name())),
         Err(_) => {
             task.abort();
-            Err(format!("Timed out after {} seconds", source.timeout().as_secs()))
+            Err(format!(
+                "Timed out after {} seconds",
+                source.timeout().as_secs()
+            ))
         }
     }
 }
@@ -132,10 +148,14 @@ fn save(store: &Store, id: &str, readings: &[Reading]) -> Result<(), String> {
 fn next_delay(interval: Duration, failures: u32) -> Duration {
     match failures {
         0 => interval,
-        n => RETRY_BASE.saturating_mul(2u32.saturating_pow(n - 1)).min(RETRY_MAX),
+        n => RETRY_BASE
+            .saturating_mul(2u32.saturating_pow(n - 1))
+            .min(RETRY_MAX),
     }
 }
 
 pub fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |since| since.as_millis() as i64)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_millis() as i64)
 }

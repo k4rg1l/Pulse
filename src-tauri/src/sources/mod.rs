@@ -22,6 +22,7 @@ pub enum Unit {
     Bytes,
     BytesPerSecond,
     Seconds,
+    Celsius,
 }
 
 /// A numeric key a source produces, with what the client and tray need to
@@ -38,6 +39,9 @@ pub struct Metric {
 pub enum WidgetType {
     /// Line over time, read from history. One or more numeric keys.
     Chart,
+    /// Two keys over time on one scale, the first above a centre line and the
+    /// second below it, so they can never cover each other.
+    MirrorChart,
     /// Capsule bar. Keys: percent, used, total.
     Meter,
     /// One large number.
@@ -46,6 +50,8 @@ pub enum WidgetType {
     Bars,
     /// Rows with a capsule bar. Key holds an array of `{name, detail, used, total}`.
     List,
+    /// Labelled text rows. Key holds an array of `{label, value}`.
+    Details,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -62,11 +68,24 @@ pub struct Widget {
 pub struct Reading {
     pub key: String,
     pub value: Json,
+    pub keep_history: bool,
 }
 
 impl Reading {
     pub fn new(key: &str, value: impl Into<Json>) -> Self {
-        Self { key: key.to_owned(), value: value.into() }
+        Self {
+            key: key.to_owned(),
+            value: value.into(),
+            keep_history: true,
+        }
+    }
+
+    /// For constants and text, which only need their latest value.
+    pub fn current_only(key: &str, value: impl Into<Json>) -> Self {
+        Self {
+            keep_history: false,
+            ..Self::new(key, value)
+        }
     }
 }
 

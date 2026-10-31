@@ -32,6 +32,8 @@ export function formatValue(unit: Unit, value: number): string {
       return `${formatBytes(value)}/s`;
     case "seconds":
       return formatDuration(value);
+    case "celsius":
+      return `${Math.round(value)}°C`;
   }
 }
 
