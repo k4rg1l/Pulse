@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::{
     scheduler::Scheduler,
     secrets,
-    sources::{Metric, Source, Sources, Widget},
+    sources::{Metric, Setup, Source, Sources, Widget},
     store::{Setting, SourceError, Store, Value},
     tray,
 };
@@ -56,6 +56,7 @@ pub struct Tab {
     metrics: Vec<Metric>,
     values: Vec<Value>,
     error: Option<SourceError>,
+    setup: Option<Setup>,
 }
 
 #[derive(Serialize)]
@@ -90,6 +91,7 @@ pub fn get_tab(source_id: String, state: State<'_, AppState>) -> Result<Tab, Str
         metrics: source.metrics(),
         values: state.store.current(&source_id).map_err(message)?,
         error: state.store.active_error(&source_id).map_err(message)?,
+        setup: source.setup(),
     })
 }
 
@@ -117,6 +119,22 @@ pub fn client_ready(app: AppHandle) -> Option<tray::Anchor> {
 pub fn refresh_source(source_id: String, state: State<'_, AppState>) -> Result<(), String> {
     state.require_source(&source_id)?;
     state.scheduler.refresh(&source_id);
+    Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn connect_source(source_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let source = state.require_source(&source_id)?;
+    source.connect()?;
+    state.scheduler.refresh(source.id());
+    Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn disconnect_source(source_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let source = state.require_source(&source_id)?;
+    source.disconnect()?;
+    state.scheduler.refresh(source.id());
     Ok(())
 }
 

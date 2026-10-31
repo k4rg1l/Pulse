@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import {
+  connectSource,
+  disconnectSource,
   getApiKeyStatus,
   getSettings,
   getTab,
@@ -7,6 +9,7 @@ import {
   updateSetting,
   type ApiKeyStatus,
   type Metric,
+  type Setup,
   type TabSummary,
 } from "./api";
 import { Picker } from "./Picker";
@@ -20,6 +23,7 @@ interface SourceOptions {
   tab: TabSummary;
   metrics: Metric[];
   keys: ApiKeyStatus[];
+  setup: Setup | null;
 }
 
 const DEFAULT_TRAY_STAT: TrayStat = { source_id: "system", key: "cpu.usage" };
@@ -72,7 +76,7 @@ function ApiKeyRow({
   );
 }
 
-export function Settings({ tabs }: { tabs: TabSummary[] }) {
+export function Settings({ tabs, active }: { tabs: TabSummary[]; active: boolean }) {
   const [sources, setSources] = useState<SourceOptions[]>([]);
   const [trayStat, setTrayStat] = useState<TrayStat>(DEFAULT_TRAY_STAT);
   const [defaultTab, setDefaultTab] = useState<string>("");
@@ -80,18 +84,23 @@ export function Settings({ tabs }: { tabs: TabSummary[] }) {
 
   function loadSources() {
     Promise.all(
-      tabs.map(async (tab) => ({
-        tab,
-        metrics: (await getTab(tab.source_id)).metrics,
-        keys: await getApiKeyStatus(tab.source_id),
-      })),
+      tabs.map(async (tab) => {
+        const { metrics, setup } = await getTab(tab.source_id);
+        return { tab, metrics, setup, keys: await getApiKeyStatus(tab.source_id) };
+      }),
     )
       .then(setSources)
       .catch((error) => setFailure(String(error)));
   }
 
+  // Loaded ahead of being shown, so the panel is the right height on the first
+  // frame, and again each time it is shown, as connections can change elsewhere.
   useEffect(() => {
-    loadSources();
+    if (tabs.length > 0) loadSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs, active]);
+
+  useEffect(() => {
     getSettings()
       .then((settings) => {
         for (const { key, value } of settings) {
@@ -100,8 +109,6 @@ export function Settings({ tabs }: { tabs: TabSummary[] }) {
         }
       })
       .catch((error) => setFailure(String(error)));
-    // Tabs are fixed for the life of the client.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function save(key: string, value: unknown) {
@@ -124,7 +131,16 @@ export function Settings({ tabs }: { tabs: TabSummary[] }) {
     save("default_tab", sourceId);
   }
 
+  function changeConnection(sourceId: string, connected: boolean) {
+    (connected ? disconnectSource(sourceId) : connectSource(sourceId))
+      .then(loadSources)
+      .catch((error) => setFailure(String(error)));
+  }
+
   const withKeys = sources.filter((source) => source.keys.length > 0);
+  const withSetup = sources.filter(
+    (source) => source.setup && source.setup.state !== "unavailable",
+  );
 
   return (
     <>
@@ -156,10 +172,12 @@ export function Settings({ tabs }: { tabs: TabSummary[] }) {
               onChange={chooseTrayStat}
               groups={sources.map(({ tab, metrics }) => ({
                 label: tab.name,
-                options: metrics.map((metric) => ({
-                  value: statId({ source_id: tab.source_id, key: metric.key }),
-                  label: metric.label,
-                })),
+                options: metrics
+                  .filter((metric) => metric.unit !== "timestamp")
+                  .map((metric) => ({
+                    value: statId({ source_id: tab.source_id, key: metric.key }),
+                    label: metric.label,
+                  })),
               }))}
             />
           </li>
@@ -178,6 +196,31 @@ export function Settings({ tabs }: { tabs: TabSummary[] }) {
             />
           </li>
         </ul>
+
+        {withSetup.length > 0 && (
+          <section>
+            <h2 className="group-title">Connections</h2>
+            <ul className="group">
+              {withSetup.map(({ tab, setup }) => {
+                const connected = setup?.state !== "disconnected";
+                return (
+                  <li className="setting" key={tab.source_id}>
+                    <div className="setting-text">
+                      <span>{tab.name}</span>
+                      <span className="caption">{connected ? "Connected" : "Not connected"}</span>
+                    </div>
+                    <button
+                      className="button"
+                      onClick={() => changeConnection(tab.source_id, connected)}
+                    >
+                      {connected ? "Disconnect" : setup?.action}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
 
         {withKeys.map(({ tab, keys }) => (
           <section key={tab.source_id}>

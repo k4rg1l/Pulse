@@ -1,5 +1,12 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import {
   clientReady,
   getSettings,
@@ -16,28 +23,22 @@ const SETTINGS = "settings";
 
 const dismiss = () => getCurrentWindow().close();
 
-/** Tracks the panel's anchor and whether it should be showing. */
-function usePopover() {
+/**
+ * Tracks the panel's anchor and whether it should be showing. A new client is only
+ * shown once `ready`, so the panel opens at its real height with its content in it.
+ */
+function usePopover(ready: boolean) {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [open, setOpen] = useState(false);
+  const listening = useRef<Promise<unknown>>(null);
 
   useEffect(() => {
-    let current = true;
     const opened = onPopoverOpened((next) => {
       setAnchor(next);
       requestAnimationFrame(() => setOpen(true));
     });
     const closing = onPopoverClosing(() => setOpen(false));
-
-    // The window stays hidden until this call, so listeners come first.
-    Promise.all([opened, closing])
-      .then(clientReady)
-      .then((next) => {
-        if (!current) return;
-        setAnchor(next);
-        // A frame at the closed state first, so the opening has somewhere to start.
-        requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
-      });
+    listening.current = Promise.all([opened, closing]);
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") dismiss();
@@ -45,12 +46,26 @@ function usePopover() {
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      current = false;
       opened.then((stop) => stop());
       closing.then((stop) => stop());
       window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    let current = true;
+    // The window stays hidden until this call, so listeners come first.
+    listening.current?.then(clientReady).then((next) => {
+      if (!current) return;
+      setAnchor(next);
+      // A frame at the closed state first, so the opening has somewhere to start.
+      requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
+    });
+    return () => {
+      current = false;
+    };
+  }, [ready]);
 
   return { anchor, open };
 }
@@ -66,11 +81,19 @@ function SettingsGlyph() {
 }
 
 export default function App() {
-  const { anchor, open } = usePopover();
   const [tabs, setTabs] = useState<TabSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const onLoaded = useCallback((sourceId: string) => {
+    setLoaded((current) => (current.includes(sourceId) ? current : [...current, sourceId]));
+  }, []);
+
+  const ready =
+    failure !== null || selected === SETTINGS || (selected !== null && loaded.includes(selected));
+  const { anchor, open } = usePopover(ready);
 
   useEffect(() => {
     Promise.all([listTabs(), getSettings()])
@@ -104,7 +127,7 @@ export default function App() {
     >
       <div className={`panel${open ? " panel-open" : ""}`}>
         <span className="notch" aria-hidden="true" />
-        <div className="panel-scroll" ref={scrollRef}>
+        <div className="panel-body">
           <nav className="topbar" aria-label="Sources">
             <div className="tabs">
               {tabs.map((tab) => (
@@ -129,11 +152,23 @@ export default function App() {
             </button>
           </nav>
 
-          <main className="content">
-            {failure && <p className="notice">Pulse could not start: {failure}</p>}
-            {selected === SETTINGS && <Settings tabs={tabs} />}
-            {selected && selected !== SETTINGS && <SourceTab key={selected} sourceId={selected} />}
-          </main>
+          <div className="panel-scroll" ref={scrollRef}>
+            <main className="content">
+              {failure && <p className="notice">Pulse could not start: {failure}</p>}
+              {tabs.map((tab) => (
+                <div key={tab.source_id} hidden={selected !== tab.source_id}>
+                  <SourceTab
+                    sourceId={tab.source_id}
+                    active={selected === tab.source_id}
+                    onLoaded={onLoaded}
+                  />
+                </div>
+              ))}
+              <div hidden={selected !== SETTINGS}>
+                <Settings tabs={tabs} active={selected === SETTINGS} />
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </div>

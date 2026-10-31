@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Fit } from "./Fit";
 
 export interface PickerOption {
   value: string;
@@ -105,7 +106,7 @@ export function Picker({ label, value, groups, onChange }: PickerProps) {
         aria-activedescendant={open ? `${baseId}-${active}` : undefined}
         onClick={() => (open ? setOpen(false) : show())}
       >
-        <span className="picker-value">{selected?.label}</span>
+        <Fit>{selected?.label}</Fit>
         <svg viewBox="0 0 10 6" aria-hidden="true">
           <path d="M1 1l4 4 4-4" />
         </svg>

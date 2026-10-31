@@ -10,6 +10,8 @@ use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value as Json;
 
+pub mod claude;
+pub mod claude_status_line;
 pub mod system;
 
 /// How long a run may take before the scheduler stops it and counts a failure.
@@ -23,6 +25,9 @@ pub enum Unit {
     BytesPerSecond,
     Seconds,
     Celsius,
+    Count,
+    /// Milliseconds since the epoch.
+    Timestamp,
 }
 
 /// A numeric key a source produces, with what the client and tray need to
@@ -42,7 +47,7 @@ pub enum WidgetType {
     /// Two keys over time on one scale, the first above a centre line and the
     /// second below it, so they can never cover each other.
     MirrorChart,
-    /// Capsule bar. Keys: percent, used, total.
+    /// Capsule bar. Keys: percent, then used and total, or a reset timestamp.
     Meter,
     /// One large number.
     Stat,
@@ -61,6 +66,27 @@ pub struct Widget {
     pub kind: WidgetType,
     pub title: &'static str,
     pub keys: &'static [&'static str],
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SetupState {
+    /// What the source reads is not on this computer.
+    Unavailable,
+    /// The user can connect it.
+    Disconnected,
+    /// Connected, with no data yet.
+    Waiting,
+    Connected,
+}
+
+/// A one-time step a source needs from the user, shown on its tab and in Settings.
+#[derive(Clone, Debug, Serialize)]
+pub struct Setup {
+    pub state: SetupState,
+    pub title: &'static str,
+    pub detail: &'static str,
+    pub action: &'static str,
 }
 
 /// One value produced by a run.
@@ -106,6 +132,19 @@ pub trait Source: Send + Sync + 'static {
         DEFAULT_TIMEOUT
     }
 
+    /// A one-time step this source needs, if any.
+    fn setup(&self) -> Option<Setup> {
+        None
+    }
+
+    fn connect(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn disconnect(&self) -> Result<(), String> {
+        Ok(())
+    }
+
     /// One run: new data, or a message describing why there is none.
     async fn run(&self, api_keys: HashMap<String, String>) -> Result<Vec<Reading>, String>;
 }
@@ -113,5 +152,8 @@ pub trait Source: Send + Sync + 'static {
 pub type Sources = Vec<Arc<dyn Source>>;
 
 pub fn all() -> Sources {
-    vec![Arc::new(system::SystemResources::default())]
+    vec![
+        Arc::new(system::SystemResources::default()),
+        Arc::new(claude::ClaudeUsage),
+    ]
 }

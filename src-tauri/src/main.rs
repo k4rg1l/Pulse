@@ -2,5 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    pulse_lib::run()
+    if std::env::args().nth(1).as_deref() == Some(pulse_lib::CLAUDE_HOOK_FLAG) {
+        pulse_lib::run_claude_hook();
+    } else {
+        pulse_lib::run();
+    }
 }

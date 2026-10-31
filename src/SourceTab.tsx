@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { getTab, onSourceChanged, refreshSource, type Tab } from "./api";
+import { connectSource, getTab, onSourceChanged, refreshSource, type Tab } from "./api";
+import { Fit } from "./Fit";
 import { formatAgo } from "./format";
 import { WidgetView } from "./widgets";
 
@@ -42,18 +43,19 @@ function useTab(sourceId: string) {
   return { tab, version, failure };
 }
 
-function useNow(everyMs: number) {
+function useNow(everyMs: number, running: boolean) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
+    if (!running) return;
     const timer = setInterval(() => setNow(Date.now()), everyMs);
     return () => clearInterval(timer);
-  }, [everyMs]);
+  }, [everyMs, running]);
   return now;
 }
 
 function RefreshIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
         d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.8v3h-3"
         stroke="currentColor"
@@ -65,10 +67,48 @@ function RefreshIcon() {
   );
 }
 
-export function SourceTab({ sourceId }: { sourceId: string }) {
+function SetupCard({ tab }: { tab: Tab }) {
+  const [failure, setFailure] = useState<string | null>(null);
+  const setup = tab.setup;
+  if (!setup || setup.state === "connected") return null;
+
+  function connect() {
+    connectSource(tab.source_id)
+      .then(() => setFailure(null))
+      .catch((error) => setFailure(String(error)));
+  }
+
+  return (
+    <div className="setup-card">
+      <div>
+        <h2>{setup.title}</h2>
+        <p className="caption">{failure ?? setup.detail}</p>
+      </div>
+      {setup.state === "disconnected" && (
+        <button className="button button-primary" onClick={connect}>
+          {setup.action}
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface SourceTabProps {
+  sourceId: string;
+  /** False while another tab is showing. Tabs stay mounted, so switching is instant. */
+  active: boolean;
+  onLoaded: (sourceId: string) => void;
+}
+
+export function SourceTab({ sourceId, active, onLoaded }: SourceTabProps) {
   const { tab, version, failure } = useTab(sourceId);
   const [rangeMs, setRangeMs] = useState(RANGES[0].ms);
-  const now = useNow(1000);
+  const now = useNow(1000, active);
+  const settled = tab !== null || failure !== null;
+
+  useEffect(() => {
+    if (settled) onLoaded(sourceId);
+  }, [settled, sourceId, onLoaded]);
 
   if (!tab) {
     return failure ? <p className="notice">Pulse could not load this tab: {failure}</p> : null;
@@ -83,7 +123,9 @@ export function SourceTab({ sourceId }: { sourceId: string }) {
     <>
       <header className="page-header">
         <div className="page-title">
-          <h1>{tab.name}</h1>
+          <h1>
+            <Fit>{tab.name}</Fit>
+          </h1>
           <button
             className="icon-button"
             aria-label={`Refresh ${tab.name}`}
@@ -95,7 +137,9 @@ export function SourceTab({ sourceId }: { sourceId: string }) {
         </div>
         <div className="page-meta">
           <p className="caption">
-            {updatedAt ? `Updated ${formatAgo(updatedAt, now)}` : "Waiting for the first reading"}
+            <Fit>
+              {updatedAt ? `Updated ${formatAgo(updatedAt, now)}` : "Waiting for the first reading"}
+            </Fit>
           </p>
           <div
             className="segmented"
@@ -118,6 +162,8 @@ export function SourceTab({ sourceId }: { sourceId: string }) {
           </div>
         </div>
       </header>
+
+      <SetupCard tab={tab} />
 
       {tab.error && (
         <div className="banner" role="alert">

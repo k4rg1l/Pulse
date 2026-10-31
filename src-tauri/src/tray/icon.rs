@@ -25,6 +25,13 @@ pub fn short_text(unit: Unit, value: f64) -> String {
     match unit {
         Unit::Percent => format!("{}", value.round().clamp(0.0, 100.0) as u32),
         Unit::Celsius => format!("{}", value.round().clamp(0.0, 999.0) as u32),
+        Unit::Count => match value {
+            v if v >= 1e9 => scaled(v, 1e9, 'G'),
+            v if v >= 1e6 => scaled(v, 1e6, 'M'),
+            v if v >= 1e3 => scaled(v, 1e3, 'K'),
+            v => format!("{}", v.round() as u32),
+        },
+        Unit::Timestamp => "--".to_owned(),
         Unit::Bytes | Unit::BytesPerSecond => match value {
             v if v >= TB => scaled(v, TB, 'T'),
             v if v >= GB => scaled(v, GB, 'G'),
@@ -55,6 +62,8 @@ pub fn long_text(unit: Unit, value: f64) -> String {
     match unit {
         Unit::Percent => format!("{value:.0}%"),
         Unit::Celsius => format!("{value:.0}\u{b0}C"),
+        Unit::Count => format!("{value:.0}"),
+        Unit::Timestamp => "--".to_owned(),
         Unit::Bytes => bytes(value),
         Unit::BytesPerSecond => format!("{}/s", bytes(value)),
         Unit::Seconds => {

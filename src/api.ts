@@ -1,7 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-export type Unit = "percent" | "bytes" | "bytes_per_second" | "seconds" | "celsius";
+export type Unit =
+  | "percent"
+  | "bytes"
+  | "bytes_per_second"
+  | "seconds"
+  | "celsius"
+  | "count"
+  | "timestamp";
 
 export type WidgetType =
   | "chart"
@@ -41,6 +48,13 @@ export interface SourceError {
   occurred_at: number;
 }
 
+export interface Setup {
+  state: "unavailable" | "disconnected" | "waiting" | "connected";
+  title: string;
+  detail: string;
+  action: string;
+}
+
 export interface Tab {
   source_id: string;
   name: string;
@@ -48,6 +62,7 @@ export interface Tab {
   metrics: Metric[];
   values: Value[];
   error: SourceError | null;
+  setup: Setup | null;
 }
 
 export interface Setting {
@@ -80,6 +95,11 @@ export const getHistory = (
 export const clientReady = () => invoke<Anchor | null>("client_ready");
 
 export const refreshSource = (source_id: string) => invoke<void>("refresh_source", { source_id });
+
+export const connectSource = (source_id: string) => invoke<void>("connect_source", { source_id });
+
+export const disconnectSource = (source_id: string) =>
+  invoke<void>("disconnect_source", { source_id });
 
 export const getSettings = () => invoke<Setting[]>("get_settings");
 

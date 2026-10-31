@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { getHistory, type Metric, type Unit } from "../api";
+import { Fit } from "../Fit";
 import { formatClock, formatDayTime, formatValue } from "../format";
 import { Figure, numberValue, type WidgetProps } from "./types";
 
 const MAX_POINTS = 240;
 const DAY = 24 * 60 * 60 * 1000;
 const SERIES_COLORS = ["var(--series-1)", "var(--series-2)"];
-const MIRROR_GAP = 1.5;
 
 interface Point {
   time: number;
@@ -49,16 +49,21 @@ function useHistory(sourceId: string, keys: string[], rangeMs: number, version: 
   return history;
 }
 
-function useWidth<T extends HTMLElement>() {
+/** The size the layout gives an element, and what one rem is at that moment. */
+function useSize<T extends HTMLElement>() {
   const ref = useRef<T>(null);
-  const [width, setWidth] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0, rem: 13 });
   useLayoutEffect(() => {
     if (!ref.current) return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      setSize({ width, height, rem });
+    });
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
-  return [ref, width] as const;
+  return [ref, size] as const;
 }
 
 /** Rounds up to 1, 2 or 5 times a power of 1024, so axis labels read cleanly. */
@@ -85,19 +90,21 @@ function segments(points: Point[]): Point[][] {
 
 export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const { series, from, to } = useHistory(tab.source_id, widget.keys, rangeMs, version);
-  const [containerRef, width] = useWidth<HTMLDivElement>();
+  const [containerRef, { width, height, rem }] = useSize<HTMLDivElement>();
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
 
   const metrics = widget.keys.map((key) => tab.metrics.find((metric) => metric.key === key));
   const unit: Unit = metrics[0]?.unit ?? "percent";
-  // The leading chart runs to the panel's edges, so its labels need the inset.
+  // The leading chart runs to the panel's edges, so its labels need the page's
+  // inset: --edge on the left, and --edge less --gutter on the right.
   const MARGIN = hero
-    ? { top: 10, right: 20, bottom: 20, left: 20 }
-    : { top: 8, right: 2, bottom: 20, left: 2 };
+    ? { top: 0.77 * rem, right: 0.84 * rem, bottom: 1.54 * rem, left: 1.54 * rem }
+    : { top: 0.62 * rem, right: 0.15 * rem, bottom: 1.54 * rem, left: 0.15 * rem };
   const mirrored = widget.type === "mirror_chart";
-  const height = hero ? 148 : mirrored ? 140 : 104;
+  const mirrorGap = 0.12 * rem;
   const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
-  const innerHeight = height - MARGIN.top - MARGIN.bottom;
+  const innerHeight = Math.max(0, height - MARGIN.top - MARGIN.bottom);
 
   const yMax = useMemo(
     () => niceMax(unit, Math.max(0, ...series.flat().map((point) => point.value))),
@@ -111,7 +118,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
     const fraction = Math.min(value, yMax) / yMax;
     if (!mirrored) return bottom - fraction * innerHeight;
     // Each side starts just off the centre line, so that both stay visible at zero.
-    const reach = MIRROR_GAP + fraction * (innerHeight / 2 - MIRROR_GAP);
+    const reach = mirrorGap + fraction * (innerHeight / 2 - mirrorGap);
     return center + (seriesIndex === 0 ? -reach : reach);
   };
   const baseline = mirrored ? center : bottom;
@@ -119,14 +126,14 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const maxLabel = formatValue(unit, yMax);
   const gridLines = mirrored
     ? [
-        { y: MARGIN.top, label: maxLabel, labelY: MARGIN.top + 13 },
+        { y: MARGIN.top, label: maxLabel, labelY: MARGIN.top + rem },
         { y: center },
-        { y: bottom, label: maxLabel, labelY: bottom - 5 },
+        { y: bottom, label: maxLabel, labelY: bottom - 0.38 * rem },
       ]
     : [0, 0.5, 1].map((fraction) => ({
         y: y(yMax * fraction),
         label: fraction > 0 ? formatValue(unit, yMax * fraction) : undefined,
-        labelY: y(yMax * fraction) + 13,
+        labelY: y(yMax * fraction) + rem,
       }));
 
   const lead = series[0] ?? [];
@@ -156,34 +163,48 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
   const headline = latest(metrics[0]);
 
   const timeLabel = rangeMs > DAY ? formatDayTime : (t: number) => formatClock(t, false);
-  // The tooltip takes the side with more room, away from the data under the cursor.
   const hoverX = hovered ? x(hovered.time) : 0;
-  const tooltipSide = hoverX > width / 2 ? { right: width - hoverX + 12 } : { left: hoverX + 12 };
+
+  // The tooltip takes the side with more room, away from the data under the cursor.
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip) return;
+    const offset = 0.92 * rem;
+    const own = tooltip.offsetWidth;
+    const left = hoverX > width / 2 ? hoverX - offset - own : hoverX + offset;
+    tooltip.style.left = `${Math.max(0, Math.min(left, width - own))}px`;
+  });
 
   return (
     <>
       <header className="chart-header">
-        <h2>{widget.title}</h2>
+        <h2>{hero ? widget.title : <Fit>{widget.title}</Fit>}</h2>
         {series.length === 1 ? (
           <p className="readout">
-            {headline === undefined ? "--" : <Figure text={formatValue(unit, headline)} />}
+            <Fit>
+              {headline === undefined ? "--" : <Figure text={formatValue(unit, headline)} />}
+            </Fit>
           </p>
         ) : (
           <ul className="legend">
             {metrics.map((metric, index) => (
               <li key={widget.keys[index]}>
-                <span className="legend-key" style={{ background: SERIES_COLORS[index] }} />
-                <span className="legend-value">
-                  {latest(metric) === undefined ? "--" : formatValue(unit, latest(metric)!)}
-                </span>
-                <span className="legend-label">{metric?.label}</span>
+                <Fit>
+                  <span className="legend-item">
+                    <span className="legend-key" style={{ background: SERIES_COLORS[index] }} />
+                    <span className="legend-value">
+                      {latest(metric) === undefined ? "--" : formatValue(unit, latest(metric)!)}
+                    </span>
+                    <span className="legend-label">{metric?.label}</span>
+                  </span>
+                </Fit>
               </li>
             ))}
           </ul>
         )}
       </header>
 
-      <div className="chart" ref={containerRef} style={{ height }}>
+      <div className="chart" ref={containerRef}>
         {!hasData ? (
           <p className="chart-empty">Pulse draws this chart as readings come in.</p>
         ) : (
@@ -225,10 +246,15 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
                 </g>
               ))}
 
-              <text className="axis-label" x={MARGIN.left} y={height - 4}>
+              <text className="axis-label" x={MARGIN.left} y={height - 0.3 * rem}>
                 {timeLabel(from)}
               </text>
-              <text className="axis-label" x={width - MARGIN.right} y={height - 4} textAnchor="end">
+              <text
+                className="axis-label"
+                x={width - MARGIN.right}
+                y={height - 0.3 * rem}
+                textAnchor="end"
+              >
                 Now
               </text>
 
@@ -258,8 +284,8 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
 
               {hero && lead.length > 0 && hover === null && (
                 <g transform={`translate(${x(lead[lead.length - 1].time)} ${y(lead[lead.length - 1].value)})`}>
-                  <circle key={version} className="pulse-ring" r="4" />
-                  <circle className="pulse-dot" r="4" />
+                  <circle key={version} className="pulse-ring" r={0.31 * rem} />
+                  <circle className="pulse-dot" r={0.31 * rem} />
                 </g>
               )}
 
@@ -277,7 +303,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
         )}
 
         {hovered && (
-          <div className="tooltip" style={tooltipSide}>
+          <div className="tooltip" ref={tooltipRef}>
             <p className="tooltip-time">{formatClock(hovered.time, rangeMs <= DAY)}</p>
             {series.map((points, index) => {
               const point = points.reduce<Point | null>(

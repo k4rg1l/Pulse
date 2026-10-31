@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use tauri::{Manager, RunEvent, WindowEvent};
 
+pub use sources::claude_status_line::{HOOK_FLAG as CLAUDE_HOOK_FLAG, run_hook as run_claude_hook};
+
 use api::AppState;
 use scheduler::{OnChange, Scheduler};
 use store::Store;
@@ -61,6 +63,8 @@ pub fn run() {
             api::get_history,
             api::client_ready,
             api::refresh_source,
+            api::connect_source,
+            api::disconnect_source,
             api::get_settings,
             api::update_setting,
             api::get_api_key_status,

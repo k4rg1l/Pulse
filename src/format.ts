@@ -22,6 +22,12 @@ export function formatDuration(seconds: number): string {
   return `${minutes}m`;
 }
 
+export function formatCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${Math.round(count / 1_000)}K`;
+  return `${Math.round(count)}`;
+}
+
 export function formatValue(unit: Unit, value: number): string {
   switch (unit) {
     case "percent":
@@ -34,6 +40,10 @@ export function formatValue(unit: Unit, value: number): string {
       return formatDuration(value);
     case "celsius":
       return `${Math.round(value)}°C`;
+    case "count":
+      return formatCount(value);
+    case "timestamp":
+      return formatShortAgo(value, Date.now());
   }
 }
 
@@ -51,6 +61,18 @@ export function formatDayTime(time: number): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+/** For large figures in small tiles, where the full wording will not fit. */
+export function formatShortAgo(time: number, now: number): string {
+  const seconds = Math.max(0, Math.round((now - time) / 1000));
+  if (seconds < 5) return "now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
 export function formatAgo(time: number, now: number): string {
