@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Rect, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
@@ -27,6 +27,10 @@ pub use popover::Anchor;
 use popover::{Bounds, Placement};
 
 pub const TRAY_STAT_SETTING: &str = "tray_stat";
+
+/// When on, the client is started with Pulse and never shut down, so the popover
+/// opens instantly for about 250 MB more memory.
+const KEEP_CLIENT_READY_SETTING: &str = "keep_client_ready";
 
 const TRAY_ID: &str = "pulse";
 const WINDOW_LABEL: &str = "main";
@@ -66,6 +70,20 @@ impl Default for TrayStat {
     }
 }
 
+/// What happens to a client once it has finished starting.
+enum Pending {
+    Show(Option<Placement>),
+    StayHidden,
+}
+
+/// What a client needs to know when it has finished starting.
+#[derive(Serialize)]
+pub struct ClientState {
+    anchor: Option<Anchor>,
+    /// False for a client started ahead of time, which must wait to be opened.
+    shown: bool,
+}
+
 #[derive(Default)]
 struct TrayState {
     /// Raised by every open and close, so that a pending shutdown can tell it
@@ -75,8 +93,8 @@ struct TrayState {
     shown: Mutex<Option<(String, Option<u8>)>>,
     closed_at: Mutex<Option<Instant>>,
     anchor: Mutex<Option<Anchor>>,
-    /// Set while a new client is starting: where to show it once it is ready.
-    pending: Mutex<Option<Option<Placement>>>,
+    /// Set while a new client is starting.
+    pending: Mutex<Option<Pending>>,
 }
 
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
@@ -180,6 +198,26 @@ fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(WINDOW_LABEL)
 }
 
+fn keeps_client_ready(app: &AppHandle) -> bool {
+    app.state::<AppState>()
+        .store
+        .setting(KEEP_CLIENT_READY_SETTING)
+        .ok()
+        .flatten()
+        .is_some_and(|value| value == true)
+}
+
+/// Starts a hidden client along with Pulse, if the user keeps one ready.
+pub fn prepare_client(app: &AppHandle) {
+    if keeps_client_ready(app) {
+        *app.state::<TrayState>()
+            .pending
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Pending::StayHidden);
+        start_client(app);
+    }
+}
+
 fn toggle_window(app: &AppHandle, icon: Rect) {
     if window(app).is_some_and(|window| window.is_visible().unwrap_or(false)) {
         close_window(app);
@@ -265,17 +303,20 @@ fn present(app: &AppHandle, window: &WebviewWindow, placement: Option<Placement>
 /// Shows a new client's popover, the first time this is called for it. A window
 /// is only shown once its webview is up: WebView2 moves focus around as it
 /// starts, which would read as a click elsewhere and dismiss the popover.
-pub fn client_ready(app: &AppHandle) -> Option<Anchor> {
+pub fn client_ready(app: &AppHandle) -> ClientState {
     let state = app.state::<TrayState>();
     let pending = state
         .pending
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .take();
-    if let (Some(placement), Some(window)) = (pending, window(app)) {
+    if let (Some(Pending::Show(placement)), Some(window)) = (pending, window(app)) {
         present(app, &window, placement);
     }
-    current_anchor(app)
+    ClientState {
+        anchor: current_anchor(app),
+        shown: window(app).is_some_and(|window| window.is_visible().unwrap_or(false)),
+    }
 }
 
 fn current_anchor(app: &AppHandle) -> Option<Anchor> {
@@ -293,16 +334,29 @@ pub fn open_window(app: &AppHandle, icon: Option<Rect>) {
         .fetch_add(1, Ordering::SeqCst);
     let placement = placement(app, icon);
 
-    if let Some(window) = window(app) {
-        present(app, &window, placement);
+    let existing = window(app);
+    let state = app.state::<TrayState>();
+    let mut pending = state
+        .pending
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+    if let (Some(window), None) = (&existing, &*pending) {
+        drop(pending);
+        present(app, window, placement);
         return;
     }
 
-    *app.state::<TrayState>()
-        .pending
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(placement);
+    // A client that is still starting shows itself as soon as it is ready.
+    *pending = Some(Pending::Show(placement));
+    drop(pending);
+    if existing.is_none() {
+        start_client(app);
+    }
+}
 
+/// Creates the window hidden. `client_ready` decides what happens next.
+fn start_client(app: &AppHandle) {
     // Creating a webview from an event handler deadlocks on Windows, because
     // both wait on the main thread. A separate task avoids that.
     let app = app.clone();
@@ -332,7 +386,7 @@ pub fn open_window(app: &AppHandle, icon: Option<Rect>) {
 }
 
 /// Fades the popover out and hides it, then shuts the client down after the
-/// delay, unless it is reopened first.
+/// delay, unless it is reopened first or the user keeps it ready.
 pub fn close_window(app: &AppHandle) {
     let Some(window) = window(app) else { return };
     if !window.is_visible().unwrap_or(false) {
@@ -363,7 +417,7 @@ pub fn close_window(app: &AppHandle) {
         let _ = window.hide();
 
         tokio::time::sleep(SHUTDOWN_DELAY).await;
-        if !superseded(&app) {
+        if !superseded(&app) && !keeps_client_ready(&app) {
             let _ = window.destroy();
         }
     });

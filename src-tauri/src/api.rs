@@ -111,7 +111,7 @@ pub fn get_history(
 }
 
 #[tauri::command(async, rename_all = "snake_case")]
-pub fn client_ready(app: AppHandle) -> Option<tray::Anchor> {
+pub fn client_ready(app: AppHandle) -> tray::ClientState {
     tray::client_ready(&app)
 }
 

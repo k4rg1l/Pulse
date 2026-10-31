@@ -1199,6 +1199,40 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.switch {
+  display: flex;
+  align-items: center;
+  width: 2.31rem;
+  height: 1.38rem;
+  padding: 0.15rem;
+  border-radius: 0.69rem;
+  background: var(--track);
+  box-shadow: 0 0 0 1px var(--hairline-strong);
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.switch-thumb {
+  width: 1.08rem;
+  height: 1.08rem;
+  border-radius: 50%;
+  background: var(--ivory-soft);
+  transition:
+    transform 0.32s var(--ease-out),
+    background-color 0.25s ease;
+}
+
+.switch[aria-checked="true"] {
+  background: var(--champagne);
+  box-shadow: 0 0 1.1rem -0.3rem rgba(216, 194, 154, 0.55);
+}
+
+.switch[aria-checked="true"] .switch-thumb {
+  background: var(--obsidian);
+  transform: translateX(0.93rem);
+}
+
 .setting-entry {
   grid-column: 1 / -1;
   display: grid;
@@ -1319,6 +1353,7 @@ h2 {
   .panel,
   .panel-open,
   .segmented-thumb,
+  .switch-thumb,
   .capsule-fill,
   .bar {
     transition: opacity 0.1s linear;

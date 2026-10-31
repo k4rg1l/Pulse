@@ -56,8 +56,8 @@ function usePopover(ready: boolean) {
     if (!ready) return;
     let current = true;
     // The window stays hidden until this call, so listeners come first.
-    listening.current?.then(clientReady).then((next) => {
-      if (!current) return;
+    listening.current?.then(clientReady).then(({ anchor: next, shown }) => {
+      if (!current || !shown) return;
       setAnchor(next);
       // A frame at the closed state first, so the opening has somewhere to start.
       requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));

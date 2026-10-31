@@ -40,6 +40,7 @@ pub fn run() {
 
             let handle = app.handle().clone();
             tray::setup(&handle)?;
+            tray::prepare_client(&handle);
 
             let on_change: OnChange = Arc::new(move |source_id| {
                 tray::source_changed(&handle, source_id);

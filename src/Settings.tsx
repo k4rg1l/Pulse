@@ -29,6 +29,28 @@ const DEFAULT_TRAY_STAT: TrayStat = { source_id: "system", key: "cpu.usage" };
 
 const statId = ({ source_id, key }: TrayStat) => `${source_id}/${key}`;
 
+function Switch({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <button
+      className="switch"
+      role="switch"
+      aria-label={label}
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+    >
+      <span className="switch-thumb" />
+    </button>
+  );
+}
+
 function ApiKeyRow({
   sourceId,
   status,
@@ -87,6 +109,7 @@ export function Settings({
   const [sources, setSources] = useState<SourceOptions[]>([]);
   const [trayStat, setTrayStat] = useState<TrayStat>(DEFAULT_TRAY_STAT);
   const [defaultTab, setDefaultTab] = useState<string>("");
+  const [keepReady, setKeepReady] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
   function loadSources() {
@@ -113,6 +136,7 @@ export function Settings({
         for (const { key, value } of settings) {
           if (key === "tray_stat") setTrayStat(value as TrayStat);
           if (key === "default_tab") setDefaultTab(value as string);
+          if (key === "keep_client_ready") setKeepReady(value === true);
         }
       })
       .catch((error) => setFailure(String(error)));
@@ -136,6 +160,11 @@ export function Settings({
   function chooseDefaultTab(sourceId: string) {
     setDefaultTab(sourceId);
     save("default_tab", sourceId);
+  }
+
+  function chooseKeepReady(on: boolean) {
+    setKeepReady(on);
+    save("keep_client_ready", on);
   }
 
   function disconnect(sourceId: string) {
@@ -201,6 +230,15 @@ export function Settings({
                 { options: tabs.map((tab) => ({ value: tab.source_id, label: tab.name })) },
               ]}
             />
+          </li>
+          <li className="setting">
+            <div className="setting-text">
+              <span>Keep Pulse ready</span>
+              <span className="caption">
+                Opens instantly, using about 250 MB more memory.
+              </span>
+            </div>
+            <Switch label="Keep Pulse ready" on={keepReady} onChange={chooseKeepReady} />
           </li>
         </ul>
 

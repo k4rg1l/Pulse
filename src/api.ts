@@ -89,6 +89,12 @@ export interface Anchor {
   offset: number;
 }
 
+export interface ClientState {
+  anchor: Anchor | null;
+  /** False for a client started ahead of time, which waits to be opened. */
+  shown: boolean;
+}
+
 export interface ApiKeyStatus {
   name: string;
   is_set: boolean;
@@ -106,7 +112,7 @@ export const getHistory = (
   max_points: number,
 ) => invoke<Value[]>("get_history", { source_id, key, from, to, max_points });
 
-export const clientReady = () => invoke<Anchor | null>("client_ready");
+export const clientReady = () => invoke<ClientState>("client_ready");
 
 export const refreshSource = (source_id: string) => invoke<void>("refresh_source", { source_id });
 
