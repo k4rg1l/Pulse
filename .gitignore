@@ -25,3 +25,6 @@ dist-ssr
 
 # Markdown
 *.md
+
+# Browser test output
+.playwright-mcp

@@ -1,0 +1,54 @@
+# Builds the Windows installer and attaches it to a draft release. Publishing the
+# draft is a separate, manual step, so nothing goes out by accident.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: tauri-apps/tauri-action@v1
+        id: tauri
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Pulse v__VERSION__
+          releaseBody: See the assets below to download and install Pulse for Windows.
+          releaseDraft: true
+
+      # The website links to the latest release by this name, which never changes.
+      - name: Attach the installer under a permanent name
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.tauri.outputs.appVersion }}
+        run: |
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe Pulse-setup.exe
+          gh release upload "v$VERSION" Pulse-setup.exe --clobber
