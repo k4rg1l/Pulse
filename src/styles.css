@@ -24,6 +24,10 @@
   --notch-size: 11px;
 
   --edge: 1.54rem;
+  /* A square edge reads wider than a rounded card of the same width, so anything
+     without corners stops this far short of the cards. Matches OPTICAL_INSET in
+     src/widgets/plot.ts. */
+  --optical-inset: 0.31rem;
   --gutter: 0.7rem;
   --gap: 0.77rem;
   --radius: 1.08rem;
@@ -397,6 +401,7 @@ h2 {
 
 .colophon {
   margin-top: var(--edge);
+  padding: 0 var(--optical-inset);
   font-size: 1.08rem;
   color: var(--ivory-faint);
 }
@@ -1199,14 +1204,11 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-/* The caption always has room for two lines, so the row holds its height as the
-   recorder's messages come and go. */
+/* As tall as the rows with two-line captions. Its messages stay on one line, so the
+   text can sit centred and nothing moves as they change. */
 .setting-shortcut {
   grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
-}
-
-.setting-shortcut .caption {
-  min-height: 2.58rem;
+  min-height: 5.77rem;
 }
 
 .caption-problem {

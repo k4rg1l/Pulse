@@ -79,9 +79,10 @@ export function useSize<T extends HTMLElement>() {
 
 /**
  * A straight line reads wider than a rounded card of the same width, so the
- * leading chart's lines stop this far short of the cards below it.
+ * leading chart's lines stop this far short of the cards below it. Matches
+ * --optical-inset in styles.css.
  */
-const HERO_OPTICAL_INSET = 0.31;
+const OPTICAL_INSET = 0.31;
 
 /**
  * The space around a plot. Data sits between `left` and `right`, and text sits
@@ -93,7 +94,7 @@ const HERO_OPTICAL_INSET = 0.31;
 export function plotMargin(hero: boolean, rem: number) {
   const textLeft = (hero ? 1.54 : 0.15) * rem;
   const textRight = (hero ? 0.84 : 0.15) * rem;
-  const inset = hero ? HERO_OPTICAL_INSET * rem : 0;
+  const inset = hero ? OPTICAL_INSET * rem : 0;
   return {
     top: (hero ? 0.77 : 0.62) * rem,
     bottom: 1.54 * rem,

@@ -153,9 +153,9 @@ export function ShortcutRecorder({ active }: { active: boolean }) {
   const caption =
     problem ??
     (recording
-      ? "Esc cancels. Backspace turns it off."
+      ? "Esc cancels, Backspace clears"
       : unavailable
-        ? "Another app is using this one. Pick another."
+        ? "Another app is using this one"
         : shortcut
           ? "Opens Pulse from anywhere."
           : "Press to choose a shortcut.");
@@ -169,7 +169,7 @@ export function ShortcutRecorder({ active }: { active: boolean }) {
           className={problem || unavailable ? "caption caption-problem" : "caption"}
           aria-live="polite"
         >
-          {caption}
+          <Fit>{caption}</Fit>
         </span>
       </div>
       <button
