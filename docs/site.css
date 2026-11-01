@@ -262,6 +262,12 @@ h2 {
   }
 }
 
+main {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 var(--edge);
+}
+
 /* The case for Pulse, read like a verse. What each number means is the large part,
    and the number beside it is the proof. */
 
@@ -314,49 +320,184 @@ h2 {
   text-decoration: none;
 }
 
-.proof + .feature {
-  border-top: 1px solid var(--hairline);
-}
+/* One story and one pinned panel. The words scroll, and the panel beside them
+   changes to match, so the page never turns into a stack of sections. */
 
-/* Each feature is one question and its answer, and only the image is loud. */
-
-main {
-  max-width: 76rem;
-  margin: 0 auto;
-  padding: 0 var(--edge);
-}
-
-.feature {
+.story {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  align-items: center;
-  gap: clamp(2rem, 6vw, 6rem);
-  padding: clamp(3rem, 7vw, 6rem) 0;
-}
-
-.feature + .feature {
+  column-gap: clamp(2rem, 6vw, 6rem);
   border-top: 1px solid var(--hairline);
 }
 
-.feature img {
+.story-stage {
+  grid-column: 2;
+  grid-row: 1 / span 5;
+  position: sticky;
+  top: 8svh;
+  align-self: start;
+  height: 84svh;
+}
+
+.story-frame {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.story-frame img {
+  width: auto;
+  max-height: 100%;
   border-radius: 1.25rem;
 }
 
-.feature-flipped {
-  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+.story-frame-showing {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.feature-flipped .words {
-  order: 1;
+.story-step {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 92svh;
+  transition: opacity 0.4s ease;
 }
 
-.words h2 {
+.story-live .story-step:not(.story-step-showing) {
+  opacity: 0.28;
+}
+
+.story-step h2 {
   font-size: clamp(2.25rem, 4vw, 3.5rem);
 }
 
-.words p {
+.story-step p {
   max-width: 30rem;
   margin-top: 1.1rem;
+  color: var(--ivory-soft);
+}
+
+/* The live Audio panel, drawn the way the app draws it. */
+
+.demo {
+  container-type: inline-size;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  aspect-ratio: 18 / 23;
+  max-width: 100%;
+  border-radius: 1.25rem;
+  background: var(--graphite) url("backgrounds/lake-1920.jpg") center / cover;
+}
+
+.demo-panel {
+  width: 74cqi;
+  padding: 5cqi;
+  border-radius: 1.25rem;
+  background: var(--obsidian);
+  box-shadow:
+    0 0 0 1px var(--glass-edge),
+    0 1.5rem 3rem -0.75rem rgba(0, 0, 0, 0.7);
+}
+
+.demo-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.demo-readout {
+  font-family: var(--serif);
+  font-size: 15cqi;
+  line-height: 0.85;
+  text-box: trim-both cap alphabetic;
+}
+
+.demo-readout small {
+  font-size: 0.55em;
+  color: var(--ivory-soft);
+}
+
+.demo-device {
+  padding: 1.2cqi 2.4cqi;
+  border-radius: 0.5rem;
+  font-size: 2.7cqi;
+  background: var(--graphite);
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+
+.demo-fader {
+  height: 4.5cqi;
+  border-radius: 0.5rem;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.demo-fader:focus-visible {
+  outline: 2px solid var(--champagne);
+  outline-offset: 2px;
+}
+
+.demo-fader canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.demo-fader-large {
+  height: 20cqi;
+  margin: 3.5cqi -5cqi;
+}
+
+.demo-apps {
+  display: grid;
+  gap: 2.6cqi;
+  margin: 0;
+  padding: 3.4cqi;
+  border-radius: 0.8rem;
+  list-style: none;
+  background: var(--graphite);
+}
+
+.demo-apps li {
+  display: grid;
+  grid-template-columns: 6.4cqi minmax(0, 1fr);
+  align-items: center;
+  gap: 2.6cqi;
+}
+
+.demo-apps button {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0.45rem;
+  font-family: var(--serif);
+  font-size: 3.4cqi;
+  color: var(--obsidian);
+  background: var(--tile);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.demo-apps button[aria-pressed="true"] {
+  opacity: 0.35;
+}
+
+.demo-apps p {
+  display: flex;
+  justify-content: space-between;
+  font-size: 2.6cqi;
+  line-height: 1.2;
+}
+
+.demo-apps p span:last-child {
   color: var(--ivory-soft);
 }
 
@@ -450,12 +591,38 @@ kbd {
     gap: 0.25rem;
   }
 
-  .feature {
-    grid-template-columns: minmax(0, 1fr);
+  /* One column: each panel follows its words, with nothing pinned. */
+  .story {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 3rem 0;
   }
 
-  .feature-flipped .words {
-    order: 0;
+  .story-stage {
+    display: contents;
+  }
+
+  .story-frame {
+    position: static;
+    order: calc(var(--frame) * 2 + 1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .story-step {
+    order: var(--order);
+    min-height: 0;
+    padding-top: 2rem;
+  }
+
+  .story-live .story-step:not(.story-step-showing) {
+    opacity: 1;
+  }
+
+  .demo {
+    width: 100%;
+    height: auto;
   }
 }
 

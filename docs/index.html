@@ -69,24 +69,24 @@
 
     <main>
       <section class="proof">
-        <h2>All pulse. No bulk.</h2>
+        <h2>Small and fast.</h2>
 
         <dl class="claims">
           <div>
             <dt>The size of a single photo.</dt>
-            <dd>4.5 MB</dd>
+            <dd>4.6 MB</dd>
           </div>
           <div>
-            <dt>Lighter than one browser tab.</dt>
-            <dd>30 MB</dd>
+            <dt>Less memory than one browser tab.</dt>
+            <dd>34 MB</dd>
           </div>
           <div>
-            <dt>Too quiet for your fans to notice.</dt>
-            <dd>0.02% CPU</dd>
+            <dt>Almost no CPU while closed.</dt>
+            <dd>0.03% CPU</dd>
           </div>
           <div>
-            <dt>Open in a blink.</dt>
-            <dd>340 ms</dd>
+            <dt>Opens in under half a second.</dt>
+            <dd>370 ms</dd>
           </div>
         </dl>
 
@@ -100,91 +100,58 @@
         </p>
       </section>
 
-      <section class="feature">
-        <div class="words">
-          <h2>Will this limit last until it resets?</h2>
-          <p>
-            Pulse draws each limit across its whole window, against an even pace. Stay under
-            the line and you have room to spare. Cross it, and Pulse tells you when you'd run
-            out.
-          </p>
+      <section class="story">
+        <div class="story-stage">
+          <figure class="story-frame story-frame-showing" data-frame="0">
+            <img src="screenshots/claude.jpg" width="1800" height="2300" loading="lazy" alt="The Claude tab, with a chart of the 5-hour limit, meters for the 5-hour and weekly limits, and tokens used." />
+          </figure>
+          <figure class="story-frame" data-frame="1">
+            <img src="screenshots/codex-calendar.jpg" width="1800" height="2300" loading="lazy" alt="A calendar of daily token use over 26 weeks, above a set of records." />
+          </figure>
+          <figure class="story-frame" data-frame="2">
+            <img src="screenshots/system.jpg" width="1800" height="2300" loading="lazy" alt="The System Resources tab, with a live CPU chart, per-core bars and GPU usage." />
+          </figure>
+          <figure class="story-frame" data-frame="3">
+            <div class="demo" aria-label="A live demo of the Audio tab">
+              <div class="demo-panel">
+                <div class="demo-top">
+                  <p class="demo-readout"><span id="demo-volume">62</span><small>%</small></p>
+                  <p class="demo-device">Headphones</p>
+                </div>
+                <div class="demo-fader demo-fader-large" data-fader="master" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="62"><canvas></canvas></div>
+                <ul class="demo-apps">
+                  <li><button data-mute="music" aria-pressed="false" aria-label="Mute music" style="--tile: #4fd17c">M</button><div><p><span>Music</span><span data-percent="music">80%</span></p><div class="demo-fader" data-fader="music" role="slider" tabindex="0" aria-label="Music volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><canvas></canvas></div></div></li>
+                  <li><button data-mute="browser" aria-pressed="false" aria-label="Mute browser" style="--tile: #5ab6f2">B</button><div><p><span>Browser</span><span data-percent="browser">55%</span></p><div class="demo-fader" data-fader="browser" role="slider" tabindex="0" aria-label="Browser volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><canvas></canvas></div></div></li>
+                  <li><button data-mute="game" aria-pressed="false" aria-label="Mute game" style="--tile: #f0886a">G</button><div><p><span>Game</span><span data-percent="game">40%</span></p><div class="demo-fader" data-fader="game" role="slider" tabindex="0" aria-label="Game volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><canvas></canvas></div></div></li>
+                </ul>
+              </div>
+            </div>
+          </figure>
+          <figure class="story-frame" data-frame="4">
+            <img src="screenshots/connect.jpg" width="1800" height="2300" loading="lazy" alt="The Connect Codex sheet, listing what Pulse will do with permission and what it will never do." />
+          </figure>
         </div>
-        <img
-          src="screenshots/codex.jpg"
-          width="1800"
-          height="2300"
-          loading="lazy"
-          alt="The Codex tab, with a chart of the weekly limit against an even pace, token totals, credits and a streak."
-        />
-      </section>
 
-      <section class="feature feature-flipped">
-        <div class="words">
+        <article class="story-step" data-step="0" style="--order: 0">
           <h2>Both Claude limits, always in view.</h2>
-          <p>
-            Your 5-hour and weekly limits, when each one resets, and the tokens behind them.
-            Pulse updates them as Claude Code responds, so you see a limit coming before you
-            hit it.
-          </p>
-        </div>
-        <img
-          src="screenshots/claude.jpg"
-          width="1800"
-          height="2300"
-          loading="lazy"
-          alt="The Claude tab, with a chart of the 5-hour limit, meters for the 5-hour and weekly limits, and tokens used."
-        />
-      </section>
-
-      <section class="feature">
-        <div class="words">
-          <h2>Half a year of work, at a glance.</h2>
-          <p>
-            Every day you used Codex, shaded by how much, with your streak and your records
-            beside it. Point at a day to read it.
-          </p>
-        </div>
-        <img
-          src="screenshots/codex-calendar.jpg"
-          width="1800"
-          height="2300"
-          loading="lazy"
-          alt="A calendar of daily token use over 26 weeks, above a set of records."
-        />
-      </section>
-
-      <section class="feature feature-flipped">
-        <div class="words">
-          <h2>Your machine, without opening anything.</h2>
-          <p>
-            CPU, every core, GPU, memory, disks and network, all live. Pick any number to sit
-            on the tray icon itself.
-          </p>
-        </div>
-        <img
-          src="screenshots/system.jpg"
-          width="1800"
-          height="2300"
-          loading="lazy"
-          alt="The System Resources tab, with a live CPU chart, per-core bars and GPU usage."
-        />
-      </section>
-
-      <section class="feature">
-        <div class="words">
-          <h2>Nothing connects until you say so.</h2>
-          <p>
-            Before Pulse reads anything, it shows you exactly what it will do, and what it
-            never will. It uses each tool's own sign-in, so it never sees your login.
-          </p>
-        </div>
-        <img
-          src="screenshots/connect.jpg"
-          width="1800"
-          height="2300"
-          loading="lazy"
-          alt="The Connect Codex sheet, listing what Pulse will do with permission and what it will never do."
-        />
+          <p>Your 5-hour and weekly limits, when each one resets, and the tokens you have used.</p>
+        </article>
+        <article class="story-step" data-step="1" style="--order: 2">
+          <h2>Know before you run out.</h2>
+          <p>Pulse charts each Codex limit against an even pace and shows when you would run out, with 26 weeks of daily use below it.</p>
+        </article>
+        <article class="story-step" data-step="2" style="--order: 4">
+          <h2>Your computer's live stats.</h2>
+          <p>CPU, every core, GPU, memory, disks and network. Any number can show on the tray icon.</p>
+        </article>
+        <article class="story-step" data-step="3" style="--order: 6">
+          <h2>Control every app's volume.</h2>
+          <p>Set each app's volume, switch devices and control what is playing. Each app's line follows its own sound. Drag the faders. The sound in this demo is simulated.</p>
+        </article>
+        <article class="story-step" data-step="4" style="--order: 8">
+          <h2>You choose what connects.</h2>
+          <p>Pulse lists what it will read and what it will never do before you connect. It never sees your login.</p>
+        </article>
       </section>
 
       <section class="closing">
@@ -192,7 +159,7 @@
           <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd>
         </p>
         <h2>Open it from anywhere.</h2>
-        <p>Choose your own shortcut in Settings, then forget Pulse is there until you need it.</p>
+        <p>Choose your own shortcut in Settings.</p>
         <a class="download" href="https://github.com/k4rg1l/Pulse/releases/latest/download/Pulse-setup.exe">
           Download for Windows
         </a>
@@ -215,5 +182,6 @@
     </footer>
 
     <script src="site.js" defer></script>
+    <script src="demo.js" defer></script>
   </body>
 </html>
