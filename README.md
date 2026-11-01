@@ -57,6 +57,18 @@ Nothing connects until you say so. Before Pulse reads anything, it shows you exa
 - Start at login.
 - Keep history for 1 week, 2 weeks or 30 days.
 
+## How we measured
+
+One release build in October 2026, on Windows 11 with an i7-13700K, at default settings with Claude and Codex connected.
+
+| | |
+|---|---|
+| Download | 4.5 MB |
+| Memory with the panel closed | 30 MB |
+| CPU with the panel closed | 0.02% of the whole machine, and higher on fewer cores |
+| Time to open | 340 ms, or under 50 ms with Keep Pulse ready |
+| Largest comparable download | [PulseBar](https://github.com/Hitbee-dev/PulseBar) at 96.7 MB, which is 21x larger |
+
 ## Build from source
 
 You need [Node.js](https://nodejs.org), [pnpm](https://pnpm.io), [Rust](https://rustup.rs) and the [Tauri prerequisites for Windows](https://v2.tauri.app/start/prerequisites/).

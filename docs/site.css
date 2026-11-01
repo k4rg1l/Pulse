@@ -240,6 +240,62 @@ h2 {
   }
 }
 
+/* The case for Pulse, read like a verse. What each number means is the large part,
+   and the number beside it is the proof. */
+
+.proof {
+  padding: clamp(4rem, 9vw, 8rem) 0;
+}
+
+.proof h2 {
+  font-size: clamp(3rem, 7vw, 5.75rem);
+}
+
+.claims {
+  display: grid;
+  gap: clamp(0.9rem, 1.8vw, 1.5rem);
+  margin: clamp(2.5rem, 5vw, 4.5rem) 0 0;
+}
+
+.claims div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.claims dt {
+  font-family: var(--serif);
+  font-size: clamp(1.75rem, 3.6vw, 3rem);
+  letter-spacing: -0.012em;
+  line-height: 1.1;
+}
+
+.claims dd {
+  flex: none;
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.3125rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--champagne);
+}
+
+.proof .fine {
+  margin-top: clamp(2.5rem, 4vw, 3.5rem);
+}
+
+.footnote {
+  margin-left: 0.15em;
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--champagne);
+  text-decoration: none;
+}
+
+.proof + .feature {
+  border-top: 1px solid var(--hairline);
+}
+
 /* Each feature is one question and its answer, and only the image is loud. */
 
 main {
@@ -361,6 +417,15 @@ kbd {
     justify-self: center;
     width: min(100%, 26rem);
     margin-right: 0;
+  }
+
+  .claims {
+    gap: 1.5rem;
+  }
+
+  .claims div {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .feature {
