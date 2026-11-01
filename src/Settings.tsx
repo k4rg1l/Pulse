@@ -265,7 +265,7 @@ export function Settings({
             <div className="setting-text">
               <span>Keep Pulse ready</span>
               <span className="caption">
-                Opens instantly, using about 250 MB more memory.
+                Opens instantly, using about 120 MB more memory.
               </span>
             </div>
             <Switch label="Keep Pulse ready" on={keepReady} onChange={chooseKeepReady} />

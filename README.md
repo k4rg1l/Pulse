@@ -2,7 +2,7 @@
 
 Everything you care about, in one tray app.
 
-Pulse sits in your Windows tray and shows your computer, your Claude limits and your Codex limits in one panel, one click or one shortcut from anywhere.
+Pulse sits in your Windows tray and shows your computer, your Claude limits and your Codex limits in one panel, one click or one shortcut from anywhere. It's a free, open source alternative to CodexBar for Windows.
 
 ![Pulse showing System Resources, Codex and Claude](docs/screenshots/hero.jpg)
 
@@ -53,7 +53,7 @@ Nothing connects until you say so. Before Pulse reads anything, it shows you exa
 
 - Choose the shortcut that opens Pulse.
 - Choose the stat shown on the tray icon, and the tab Pulse opens to.
-- Keep Pulse ready, which opens it instantly for about 250 MB more memory.
+- Keep Pulse ready, which opens it instantly for about 120 MB more memory.
 - Start at login.
 - Keep history for 1 week, 2 weeks or 30 days.
 
