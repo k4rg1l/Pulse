@@ -221,6 +221,11 @@ pub fn get_update(app: AppHandle) -> Option<String> {
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn check_for_update(app: AppHandle) -> Result<Option<String>, String> {
+    updates::check(&app).await.map_err(message)
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn install_update(app: AppHandle) -> Result<(), String> {
     updates::install(&app).await
 }

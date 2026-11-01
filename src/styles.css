@@ -1587,7 +1587,7 @@ h2 {
 }
 
 .audio-device {
-  flex: 0 0 48%;
+  flex: 0 0 62%;
   min-width: 0;
 }
 
@@ -1758,14 +1758,14 @@ h2 {
   margin-bottom: 0;
 }
 
-.microphone-controls {
+.device-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--gap);
 }
 
-.microphone-muted {
+.device-muted {
   color: var(--obsidian);
   background: var(--warning);
 }

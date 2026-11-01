@@ -298,17 +298,17 @@ impl Sampler {
             Reading::current_only("system.cores", identity.cores.as_str()),
             Reading::current_only("system.machine", identity.machine.as_str()),
             Reading::new("cpu.usage", round(self.system.global_cpu_usage() as f64)),
-            Reading::new("cpu.cores", cores),
-            Reading::new(
+            Reading::current_only("cpu.cores", cores),
+            Reading::current_only(
                 "memory.usage",
                 round(used as f64 / total.max(1) as f64 * 100.0),
             ),
-            Reading::new("memory.used", used),
+            Reading::current_only("memory.used", used),
             Reading::current_only("memory.total", total),
             Reading::new("net.down", (down as f64 / elapsed).round()),
             Reading::new("net.up", (up as f64 / elapsed).round()),
-            Reading::new("disks", disks),
-            Reading::new("uptime", System::uptime().map_err(describe)?),
+            Reading::current_only("disks", disks),
+            Reading::current_only("uptime", System::uptime().map_err(describe)?),
         ];
 
         // A GPU problem leaves its widgets on their last values. The rest still updates.
@@ -328,13 +328,13 @@ fn read_gpu(nvml: &Nvml) -> Result<Vec<Reading>, NvmlError> {
 
     Ok(vec![
         Reading::new("gpu.usage", usage.gpu),
-        Reading::new(
+        Reading::current_only(
             "gpu.memory.usage",
             round(memory.used as f64 / memory.total.max(1) as f64 * 100.0),
         ),
-        Reading::new("gpu.memory.used", memory.used),
+        Reading::current_only("gpu.memory.used", memory.used),
         Reading::current_only("gpu.memory.total", memory.total),
-        Reading::new("gpu.temperature", temperature),
+        Reading::current_only("gpu.temperature", temperature),
     ])
 }
 

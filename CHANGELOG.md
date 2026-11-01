@@ -2,6 +2,23 @@
 
 All notable changes to Pulse are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-11-01
+
+### Added
+
+- Check for updates in Settings, with the installed version.
+- A Mute button for the output device on the Audio tab.
+
+### Changed
+
+- Pulse saves history only for the values it charts.
+- The Audio tab measures sound as it plays, without rebuilding buffers on every frame.
+- Devices with the same name show only the part that tells them apart.
+
+### Fixed
+
+- The Audio tab shows when the output is muted.
+
 ## [0.3.0] - 2026-11-01
 
 ### Added
@@ -47,6 +64,7 @@ All notable changes to Pulse are listed here. The format follows [Keep a Changel
 
 - First public release: System Resources, Claude and Codex tabs in a Windows tray panel.
 
+[0.3.1]: https://github.com/k4rg1l/Pulse/releases/tag/v0.3.1
 [0.3.0]: https://github.com/k4rg1l/Pulse/releases/tag/v0.3.0
 [0.2.1]: https://github.com/k4rg1l/Pulse/releases/tag/v0.2.1
 [0.2.0]: https://github.com/k4rg1l/Pulse/releases/tag/v0.2.0

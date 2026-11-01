@@ -192,7 +192,7 @@ impl Mixer {
                 json!({
                     "id": group.id,
                     "peak": if peak < QUIET { 0.0 } else { peak },
-                    "bands": self.captures.get(&group.id).map(|(_, capture)| capture.bands()),
+                    "bands": self.captures.get_mut(&group.id).map(|(_, capture)| capture.bands()),
                 })
             })
             .collect();

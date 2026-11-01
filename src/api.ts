@@ -175,6 +175,8 @@ export const pauseShortcut = (paused: boolean) => invoke<void>("pause_shortcut",
 
 export const getUpdate = () => invoke<string | null>("get_update");
 
+export const checkForUpdate = () => invoke<string | null>("check_for_update");
+
 export const installUpdate = () => invoke<void>("install_update");
 
 export const onSourceChanged =(handler: (sourceId: string) => void): Promise<UnlistenFn> =>

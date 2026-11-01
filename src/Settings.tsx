@@ -17,6 +17,7 @@ import { Picker } from "./Picker";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 import { Switch } from "./Switch";
 import { TabOrder } from "./TabOrder";
+import { UpdateRow } from "./UpdateRow";
 
 interface TrayStat {
   source_id: string;
@@ -273,6 +274,7 @@ export function Settings({
               groups={[{ options: HISTORY_LENGTHS }]}
             />
           </li>
+          <UpdateRow />
         </ul>
 
         <TabOrder onChanged={onTabsChanged} />

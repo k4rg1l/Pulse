@@ -147,11 +147,11 @@ function AppRow({
 
 type LiveFrameRef = ReturnType<typeof useLiveFrame>;
 
-/** Windows adds the hardware in brackets, which only helps to tell two alike apart. */
+/** Windows adds the hardware in brackets. Only that part tells two alike apart. */
 function shortName(name: string, all: AudioDevice[]): string {
   const short = (full: string) => full.replace(/\s*\(.*\)$/, "");
   const alike = all.filter((device) => short(device.name) === short(name)).length;
-  return alike > 1 ? name : short(name);
+  return alike > 1 ? (name.match(/\((.*)\)$/)?.[1] ?? name) : short(name);
 }
 
 /** The devices of one flow as choices, with a line that says so when there are none. */
@@ -178,6 +178,27 @@ function DevicePicker({
   );
 }
 
+/** Mutes a device. Muted is the one state that needs to stand out on this tab. */
+function MuteButton({
+  endpoint,
+  onChange,
+}: {
+  endpoint: Endpoint | undefined;
+  onChange: (muted: boolean) => void;
+}) {
+  const muted = endpoint?.muted ?? false;
+  return (
+    <button
+      className={`button${muted ? " device-muted" : ""}`}
+      aria-pressed={muted}
+      disabled={!endpoint?.current}
+      onClick={() => onChange(!muted)}
+    >
+      {muted ? "Muted" : "Mute"}
+    </button>
+  );
+}
+
 /** Whether an app is the one playing this track. */
 function isPlayedBy(track: Track | null | undefined, app: AudioApp): boolean {
   return Boolean(track?.playing) && app.id.endsWith(`\\${track?.app}.exe`);
@@ -198,6 +219,7 @@ export function AudioTab({ live, onLoaded }: { live: boolean; onLoaded: () => vo
 
   const track = audio?.track;
   const apps = audio?.apps ?? [];
+  const outputMuted = audio?.output.muted ?? false;
   const microphoneMuted = audio?.input.muted ?? false;
   const soundingCount = apps.filter((app) => app.playing && !app.muted).length;
   const artTint = tintOf(track?.art);
@@ -218,9 +240,11 @@ export function AudioTab({ live, onLoaded }: { live: boolean; onLoaded: () => vo
           <p className="caption" role={failure ? "alert" : undefined}>
             <Fit>
               {failure ??
-                (soundingCount === 0
-                  ? "Silent"
-                  : `${soundingCount} ${soundingCount === 1 ? "app" : "apps"} playing`)}
+                (outputMuted
+                  ? "Output muted"
+                  : soundingCount === 0
+                    ? "Silent"
+                    : `${soundingCount} ${soundingCount === 1 ? "app" : "apps"} playing`)}
             </Fit>
           </p>
         </div>
@@ -233,12 +257,16 @@ export function AudioTab({ live, onLoaded }: { live: boolean; onLoaded: () => vo
               <Figure text={percent(output.value)} />
             </Fit>
           </p>
-          <div className="audio-device">
+          <div className="audio-device device-controls">
             <DevicePicker
               label="Output"
               empty="No output"
               endpoint={audio?.output}
               onChange={(id) => perform({ action: "set_device", id })}
+            />
+            <MuteButton
+              endpoint={audio?.output}
+              onChange={(muted) => perform({ action: "set_muted", flow: "output", muted })}
             />
           </div>
         </div>
@@ -247,13 +275,13 @@ export function AudioTab({ live, onLoaded }: { live: boolean; onLoaded: () => vo
           value={output.value}
           onChange={output.change}
           onRelease={output.release}
-          sounding={!audio?.output.muted}
+          sounding={!outputMuted}
           moment={() => frame.current}
           seed={MASTER_SEED}
-          tint={RESTING_TINT}
+          tint={outputMuted ? MUTED_TINT : RESTING_TINT}
           blend={() =>
             apps
-              .filter((app) => app.playing && !app.muted)
+              .filter((app) => !outputMuted && app.playing && !app.muted)
               .map((app) => ({
                 color: colourOf(app),
                 weight: frame.current.apps.find((moment) => moment.id === app.id)?.peak ?? 0,
@@ -291,23 +319,17 @@ export function AudioTab({ live, onLoaded }: { live: boolean; onLoaded: () => vo
 
       <section className="microphone">
         <h2>Microphone</h2>
-        <div className="microphone-controls">
+        <div className="device-controls">
           <DevicePicker
             label="Input"
             empty="No microphone"
             endpoint={audio?.input}
             onChange={(id) => perform({ action: "set_device", id })}
           />
-          <button
-            className={`button${microphoneMuted ? " microphone-muted" : ""}`}
-            aria-pressed={microphoneMuted}
-            disabled={!audio?.input.current}
-            onClick={() =>
-              perform({ action: "set_muted", flow: "input", muted: !microphoneMuted })
-            }
-          >
-            {microphoneMuted ? "Muted" : "Mute"}
-          </button>
+          <MuteButton
+            endpoint={audio?.input}
+            onChange={(muted) => perform({ action: "set_muted", flow: "input", muted })}
+          />
         </div>
         <LivingFader
           label="Microphone level"

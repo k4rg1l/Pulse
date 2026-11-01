@@ -46,13 +46,15 @@ pub fn watch(app: &AppHandle) {
     });
 }
 
-async fn check(app: &AppHandle) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = app.updater()?.check().await? {
-        let version = update.version.clone();
-        app.state::<AvailableUpdate>().replace(update);
-        let _ = app.emit(UPDATE_AVAILABLE, version);
-    }
-    Ok(())
+/// Looks for a new release, and returns its version if there is one.
+pub async fn check(app: &AppHandle) -> tauri_plugin_updater::Result<Option<String>> {
+    let Some(update) = app.updater()?.check().await? else {
+        return Ok(None);
+    };
+    let version = update.version.clone();
+    app.state::<AvailableUpdate>().replace(update);
+    let _ = app.emit(UPDATE_AVAILABLE, version.clone());
+    Ok(Some(version))
 }
 
 pub fn available_version(app: &AppHandle) -> Option<String> {

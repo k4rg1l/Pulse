@@ -1,8 +1,7 @@
-//! Reads the sound itself, for the waveforms. It lives only in this buffer, which
-//! holds a fraction of a second and is replaced as it goes. Nothing is recorded.
+//! Reads the sound itself, to measure it for the lines. Samples are measured as they
+//! pass and kept nowhere. Nothing is recorded.
 
 use std::{
-    collections::VecDeque,
     sync::mpsc::{self, Sender},
     time::Duration,
 };
@@ -30,15 +29,11 @@ use windows::{
     core::{Error, HRESULT, IUnknown, Interface, Ref, Result, implement},
 };
 
-/// How much recent sound is measured, 50 milliseconds at 48 kHz.
-const WINDOW: usize = 2400;
-
-/// Averaging this many samples keeps sound below about 100 Hz: the bass.
-const BASS_SPAN: usize = 240;
-
-/// Averaging this many samples keeps sound below about 1 kHz. What it removes from
-/// the whole is the treble, and what it adds to the bass is the mids.
-const MIDS_SPAN: usize = 24;
+/// How much of each new sample the filters take in. These let through sound below
+/// about 100 Hz, the bass, and below about 1 kHz. What the second removes from the
+/// whole is the treble, and what it adds to the first is the mids.
+const BASS_FILTER: f32 = 0.013;
+const MIDS_FILTER: f32 = 0.122;
 
 /// How far each band is lifted to fill its range. Music has far less treble than bass.
 const BASS_GAIN: f32 = 3.5;
@@ -77,7 +72,7 @@ pub struct Capture {
     reader: IAudioCaptureClient,
     channels: usize,
     float: bool,
-    recent: VecDeque<f32>,
+    meter: BandMeter,
     ready: Option<HANDLE>,
 }
 
@@ -119,7 +114,7 @@ impl Capture {
                 reader,
                 channels,
                 float: true,
-                recent: VecDeque::with_capacity(WINDOW * 2),
+                meter: BandMeter::default(),
                 ready: None,
             })
         }
@@ -204,7 +199,7 @@ impl Capture {
                 reader,
                 channels: usize::from(channels),
                 float: false,
-                recent: VecDeque::with_capacity(WINDOW * 2),
+                meter: BandMeter::default(),
                 ready: Some(ready),
             })
         }
@@ -232,58 +227,58 @@ impl Capture {
                     } else {
                         f32::from(*data.cast::<i16>().add(first)) / f32::from(i16::MAX)
                     };
-                    self.recent.push_back(sample);
+                    self.meter.push(sample);
                 }
                 self.reader.ReleaseBuffer(frames)?;
             }
         }
-        while self.recent.len() > WINDOW {
-            self.recent.pop_front();
-        }
         Ok(())
     }
 
-    /// How much bass, mids and treble are in the latest sound, each from 0 to 1.
-    pub fn bands(&self) -> [f32; 3] {
-        if self.recent.len() < WINDOW {
-            return [0.0; 3];
-        }
-        let samples: Vec<f32> = self.recent.iter().copied().collect();
-        let bass = softened(&samples, BASS_SPAN);
-        let lower = softened(&samples, MIDS_SPAN);
-
-        let (mut bass_power, mut mids_power, mut treble_power) = (0.0, 0.0, 0.0);
-        for index in 0..samples.len() {
-            bass_power += bass[index] * bass[index];
-            let mids = lower[index] - bass[index];
-            mids_power += mids * mids;
-            let treble = samples[index] - lower[index];
-            treble_power += treble * treble;
-        }
-        let strength = |power: f32, gain: f32| {
-            let level = (power / samples.len() as f32).sqrt() * gain;
-            (level.min(1.0).sqrt() * 1000.0).round() / 1000.0
-        };
-        [
-            strength(bass_power, BASS_GAIN),
-            strength(mids_power, MIDS_GAIN),
-            strength(treble_power, TREBLE_GAIN),
-        ]
+    /// How much bass, mids and treble have played since the last time this was asked.
+    pub fn bands(&mut self) -> [f32; 3] {
+        self.meter.bands()
     }
 }
 
-/// Averages each sample with those before it, which removes what moves faster.
-fn softened(samples: &[f32], span: usize) -> Vec<f32> {
-    let mut sum = 0.0;
-    samples
-        .iter()
-        .enumerate()
-        .map(|(index, sample)| {
-            sum += sample;
-            if index >= span {
-                sum -= samples[index - span];
-            }
-            sum / (index + 1).min(span) as f32
-        })
-        .collect()
+/// Measures sound one sample at a time, so it costs the same however long it runs.
+#[derive(Default)]
+struct BandMeter {
+    bass: f32,
+    lower: f32,
+    power: [f32; 3],
+    samples: u32,
+    last: [f32; 3],
+}
+
+impl BandMeter {
+    fn push(&mut self, sample: f32) {
+        self.bass += (sample - self.bass) * BASS_FILTER;
+        self.lower += (sample - self.lower) * MIDS_FILTER;
+        let mids = self.lower - self.bass;
+        let treble = sample - self.lower;
+        self.power[0] += self.bass * self.bass;
+        self.power[1] += mids * mids;
+        self.power[2] += treble * treble;
+        self.samples += 1;
+    }
+
+    /// Between two packets of sound there is nothing new, so the last result stands.
+    fn bands(&mut self) -> [f32; 3] {
+        if self.samples > 0 {
+            let samples = self.samples as f32;
+            let strength = |power: f32, gain: f32| {
+                let level = (power / samples).sqrt() * gain;
+                (level.min(1.0).sqrt() * 1000.0).round() / 1000.0
+            };
+            self.last = [
+                strength(self.power[0], BASS_GAIN),
+                strength(self.power[1], MIDS_GAIN),
+                strength(self.power[2], TREBLE_GAIN),
+            ];
+            self.power = [0.0; 3];
+            self.samples = 0;
+        }
+        self.last
+    }
 }

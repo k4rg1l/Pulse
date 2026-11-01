@@ -93,6 +93,7 @@ pub fn run() {
             api::get_start_at_login,
             api::set_start_at_login,
             api::get_update,
+            api::check_for_update,
             api::install_update,
         ])
         .build(tauri::generate_context!())
