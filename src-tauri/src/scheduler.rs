@@ -7,7 +7,10 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use tokio::{sync::Notify, time};
+use tokio::{
+    sync::{Notify, watch},
+    time,
+};
 
 use crate::{
     secrets,
@@ -30,6 +33,8 @@ pub type OnChange = Arc<dyn Fn(&str) + Send + Sync>;
 
 pub struct Scheduler {
     triggers: HashMap<&'static str, Arc<Notify>>,
+    /// Whether each source should run. A source of a hidden tab waits here.
+    running: HashMap<&'static str, watch::Sender<bool>>,
 }
 
 impl Scheduler {
@@ -39,6 +44,17 @@ impl Scheduler {
                 .iter()
                 .map(|source| (source.id(), Arc::new(Notify::new())))
                 .collect(),
+            running: sources
+                .iter()
+                .map(|source| (source.id(), watch::Sender::new(true)))
+                .collect(),
+        }
+    }
+
+    /// Starts or stops a source.
+    pub fn set_running(&self, source_id: &str, running: bool) {
+        if let Some(sender) = self.running.get(source_id) {
+            sender.send_replace(running);
         }
     }
 
@@ -65,9 +81,11 @@ impl Scheduler {
     pub async fn run(self: Arc<Self>, sources: Sources, store: Arc<Store>, on_change: OnChange) {
         for source in sources {
             let trigger = self.triggers[source.id()].clone();
+            let running = self.running[source.id()].subscribe();
             tokio::spawn(source_loop(
                 source,
                 trigger,
+                running,
                 store.clone(),
                 on_change.clone(),
             ));
@@ -99,13 +117,30 @@ impl Scheduler {
 async fn source_loop(
     source: Arc<dyn Source>,
     trigger: Arc<Notify>,
+    mut running: watch::Receiver<bool>,
     store: Arc<Store>,
     on_change: OnChange,
 ) {
     let id = source.id();
     let mut failures = 0;
+    let mut watching = false;
 
     loop {
+        if !*running.borrow_and_update() {
+            if watching {
+                source.unwatch();
+                watching = false;
+            }
+            if running.changed().await.is_err() {
+                return;
+            }
+            continue;
+        }
+        if !watching {
+            source.watch(trigger.clone());
+            watching = true;
+        }
+
         match run_once(&source)
             .await
             .and_then(|readings| save(&store, id, &readings))
@@ -123,6 +158,7 @@ async fn source_loop(
         tokio::select! {
             _ = time::sleep(next_delay(source.interval(), failures)) => {}
             _ = trigger.notified() => {}
+            _ = running.changed() => {}
         }
     }
 }

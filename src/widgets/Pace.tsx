@@ -47,9 +47,9 @@ function graduations(start: number, end: number): Graduation[] {
 /** Where the limit ends up if the rest of the window goes like the part so far. */
 function forecast(used: number, start: number, resetsAt: number, now: number) {
   const elapsed = (now - start) / (resetsAt - start);
-  if (used >= 100) return { text: `Back ${formatDayTime(resetsAt)}`, over: true };
+  if (used >= 100) return { text: `Resets ${formatDayTime(resetsAt)}`, over: true };
   if (used === 0) return { text: "Nothing used yet", over: false };
-  if (elapsed < TOO_EARLY_TO_FORECAST) return { text: "Too early to call", over: false };
+  if (elapsed < TOO_EARLY_TO_FORECAST) return { text: "Not enough data yet", over: false };
 
   const projected = used / elapsed;
   if (projected < 100) {

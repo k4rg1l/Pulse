@@ -1356,6 +1356,46 @@ h2 {
 }
 
 /* The list opens in the flow, under its row, and the page scrolls if it needs to. */
+/* Tabs in Settings: a handle, a name and a switch on one line. */
+.tab-choice {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.46rem;
+  padding: 0.62rem 1.08rem 0.62rem 0.62rem;
+  transition: background-color 0.15s ease;
+}
+
+.tab-choice-moving {
+  background: var(--graphite);
+}
+
+.tab-grip {
+  display: grid;
+  place-items: center;
+  width: 1.69rem;
+  height: var(--control);
+  border-radius: var(--radius-small);
+  color: var(--ivory-faint);
+  cursor: grab;
+  touch-action: none;
+}
+
+.tab-grip svg {
+  width: 0.62rem;
+  height: 1rem;
+}
+
+.tab-grip:hover {
+  color: var(--ivory);
+}
+
+.tab-choice-moving .tab-grip {
+  cursor: grabbing;
+}
+
+.tab-order-note {
+  margin: 0.62rem 0 0 0.15rem;
+}
+
 .picker {
   display: contents;
 }
@@ -1397,16 +1437,23 @@ h2 {
   transform: rotate(180deg);
 }
 
+/* Floats over the panel, placed by Picker.tsx, so opening it moves nothing. */
 .picker-menu {
-  grid-column: 1 / -1;
+  position: fixed;
+  inset: auto;
+  margin: 0;
   padding: 0.38rem;
+  border: 0;
   border-radius: 0.92rem;
-  background: var(--glass);
+  color: inherit;
+  background: var(--graphite);
   box-shadow:
     inset 0 1px 0 var(--glass-edge),
-    0 0 0 1px var(--hairline-strong);
+    0 0 0 1px var(--hairline-strong),
+    0 0.77rem 2rem -0.46rem rgba(0, 0, 0, 0.75);
+  overflow-x: hidden;
+  overflow-y: auto;
   overflow-wrap: anywhere;
-  transform-origin: 100% 0;
   animation: picker-open 0.2s var(--ease-out);
 }
 
@@ -1462,6 +1509,265 @@ h2 {
 
 .field::placeholder {
   color: var(--ivory-faint);
+}
+
+/* Audio. One line carries the sound and the control together, so the tab needs
+   little else: a large fader, the track, the apps and the microphone. Colour comes
+   from the music and nowhere else. Every card shares one inset, so what is inside
+   them lines up from top to bottom. */
+
+.fader {
+  --fader-faint: rgba(240, 234, 222, 0.24);
+
+  height: 1.69rem;
+  border-radius: var(--radius-small);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.fader-stage {
+  position: relative;
+  height: 100%;
+}
+
+.fader-settling {
+  transition: transform 0.5s cubic-bezier(0.2, 1.5, 0.35, 1);
+}
+
+.fader-line,
+.fader-aura {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A small drawing blurred by the graphics card, with no edge to it at all. It may
+   spill past the fader, which is what makes it read as light. */
+.fader-aura {
+  filter: blur(0.77rem);
+  pointer-events: none;
+}
+
+.fader-large .fader-aura {
+  filter: blur(0.77rem);
+}
+
+.fader-large {
+  height: 7.7rem;
+}
+
+.audio-hero {
+  container-type: inline-size;
+  margin: 0.15rem calc(var(--gutter) - var(--edge)) 1.08rem calc(var(--edge) * -1);
+}
+
+.audio-hero-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: 1.23rem;
+  padding: 0 calc(var(--edge) - var(--gutter)) 0 var(--edge);
+}
+
+.audio-hero .readout {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(3rem, 23cqi, 9rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Trims the figure's box to its digits, so its foot is the digits' foot. */
+.audio-hero .readout .fit-content {
+  text-box: trim-both cap alphabetic;
+}
+
+.audio-device {
+  flex: 0 0 48%;
+  min-width: 0;
+}
+
+.playing,
+.mix,
+.microphone {
+  margin-bottom: var(--gap);
+  padding: 1.08rem 1.23rem;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+
+.playing {
+  display: grid;
+  grid-template-columns: 4.3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.92rem;
+  background: var(--graphite);
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    inset 0 1px 0 rgba(240, 234, 222, 0.04);
+}
+
+.playing-art {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-small);
+  background: var(--glass);
+}
+
+.playing-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playing-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.playing-text h2 {
+  font-family: var(--serif);
+  font-size: 1.46rem;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ivory);
+}
+
+.playing-time {
+  color: var(--ivory-faint);
+}
+
+.playing-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-right: -0.46rem;
+}
+
+.transport {
+  display: grid;
+  place-items: center;
+  width: var(--control);
+  height: var(--control);
+  border-radius: 50%;
+  color: var(--ivory-soft);
+}
+
+.transport svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.transport:hover {
+  color: var(--ivory);
+  background: var(--track);
+}
+
+.transport-main {
+  color: var(--obsidian);
+  background: var(--ivory);
+}
+
+.transport-main:hover {
+  color: var(--obsidian);
+  background: var(--champagne);
+}
+
+.playing-progress {
+  grid-column: 1 / -1;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: var(--track);
+}
+
+.playing-progress span {
+  display: block;
+  height: 100%;
+  background: var(--ivory-soft);
+}
+
+.mix,
+.microphone {
+  background: var(--charcoal);
+}
+
+.mix {
+  display: grid;
+  gap: 1.08rem;
+}
+
+.mix-row {
+  display: grid;
+  grid-template-columns: var(--control) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.92rem;
+}
+
+.mix-icon {
+  width: var(--control);
+  height: var(--control);
+  border-radius: var(--radius-small);
+  font-family: var(--serif);
+  font-size: 1.23rem;
+  color: var(--ivory);
+  background: var(--glass);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
+  transition: opacity 0.2s ease;
+}
+
+.mix-icon img {
+  display: block;
+  width: 72%;
+  height: 72%;
+  margin: auto;
+}
+
+.mix-icon[aria-pressed="true"] {
+  opacity: 0.4;
+}
+
+.mix-body {
+  display: grid;
+  gap: 0.23rem;
+  min-width: 0;
+}
+
+.mix-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--gap);
+  font-size: 0.96rem;
+  transition: color 0.2s ease;
+}
+
+.mix-row:not(.mix-row-sounding) .mix-label {
+  color: var(--ivory-soft);
+}
+
+.microphone {
+  display: grid;
+  gap: 0.77rem;
+  margin-bottom: 0;
+}
+
+.microphone-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.microphone-muted {
+  color: var(--obsidian);
+  background: var(--warning);
 }
 
 @media (prefers-reduced-motion: reduce) {

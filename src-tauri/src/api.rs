@@ -8,14 +8,15 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use serde_json::Value as Json;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, ipc::Channel};
 
 use crate::{
     scheduler::{Scheduler, now_ms},
     secrets,
-    sources::{Metric, Setup, Source, Sources, Widget},
+    sources::{LiveSink, Metric, Setup, Source, Sources, Widget},
     startup,
     store::{HISTORY_DAYS_SETTING, Setting, SourceError, Store, Value},
+    tabs::{self, TabChoice},
     tray::{
         self,
         shortcut::{self, ShortcutStatus},
@@ -48,12 +49,6 @@ pub fn notify_source_changed(app: &AppHandle, source_id: &str) {
 }
 
 #[derive(Serialize)]
-pub struct TabSummary {
-    source_id: &'static str,
-    name: &'static str,
-}
-
-#[derive(Serialize)]
 pub struct Tab {
     source_id: &'static str,
     name: &'static str,
@@ -62,6 +57,7 @@ pub struct Tab {
     values: Vec<Value>,
     error: Option<SourceError>,
     setup: Option<Setup>,
+    state: Option<Json>,
 }
 
 #[derive(Serialize)]
@@ -75,15 +71,21 @@ fn message(error: impl std::fmt::Display) -> String {
 }
 
 #[tauri::command(async, rename_all = "snake_case")]
-pub fn list_tabs(state: State<'_, AppState>) -> Vec<TabSummary> {
-    state
-        .sources
-        .iter()
-        .map(|source| TabSummary {
-            source_id: source.id(),
-            name: source.name(),
-        })
+pub fn list_tabs(state: State<'_, AppState>) -> Vec<TabChoice> {
+    tabs::choices(&state)
+        .into_iter()
+        .filter(|choice| choice.shown)
         .collect()
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn get_tab_choices(state: State<'_, AppState>) -> Vec<TabChoice> {
+    tabs::choices(&state)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn set_tab_choices(choices: Vec<TabChoice>, app: AppHandle) -> Result<(), String> {
+    tabs::choose(&app, choices)
 }
 
 #[tauri::command(async, rename_all = "snake_case")]
@@ -97,6 +99,7 @@ pub fn get_tab(source_id: String, state: State<'_, AppState>) -> Result<Tab, Str
         values: state.store.current(&source_id).map_err(message)?,
         error: state.store.active_error(&source_id).map_err(message)?,
         setup: source.setup(),
+        state: source.state(),
     })
 }
 
@@ -124,6 +127,28 @@ pub fn client_ready(app: AppHandle) -> tray::ClientState {
 pub fn refresh_source(source_id: String, state: State<'_, AppState>) -> Result<(), String> {
     state.require_source(&source_id)?;
     state.scheduler.refresh(&source_id);
+    Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn act(source_id: String, action: Json, state: State<'_, AppState>) -> Result<(), String> {
+    state.require_source(&source_id)?.act(action)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn start_live(
+    source_id: String,
+    channel: Channel<Json>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let sink: LiveSink = Box::new(move |moment| channel.send(moment).is_ok());
+    state.require_source(&source_id)?.set_live(Some(sink));
+    Ok(())
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn stop_live(source_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    state.require_source(&source_id)?.set_live(None);
     Ok(())
 }
 

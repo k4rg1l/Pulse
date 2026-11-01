@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type Unit =
@@ -28,6 +28,10 @@ export type WidgetType =
 export interface TabSummary {
   source_id: string;
   name: string;
+}
+
+export interface TabChoice extends TabSummary {
+  shown: boolean;
 }
 
 export interface Widget {
@@ -77,6 +81,8 @@ export interface Tab {
   values: Value[];
   error: SourceError | null;
   setup: Setup | null;
+  /** What the source holds only in memory. Its shape belongs to that source. */
+  state: unknown;
 }
 
 export interface Setting {
@@ -108,6 +114,11 @@ export interface ApiKeyStatus {
 
 export const listTabs = () => invoke<TabSummary[]>("list_tabs");
 
+export const getTabChoices = () => invoke<TabChoice[]>("get_tab_choices");
+
+export const setTabChoices = (choices: TabChoice[]) =>
+  invoke<void>("set_tab_choices", { choices });
+
 export const getTab = (source_id: string) => invoke<Tab>("get_tab", { source_id });
 
 export const getHistory = (
@@ -122,7 +133,20 @@ export const clientReady = () => invoke<ClientState>("client_ready");
 
 export const refreshSource = (source_id: string) => invoke<void>("refresh_source", { source_id });
 
-export const connectSource = (source_id: string) => invoke<void>("connect_source", { source_id });
+export const act = (source_id: string, action: unknown) =>
+  invoke<void>("act", { source_id, action });
+
+/** Opens a source's live lane, for moments too quick to go through its tab. */
+export function startLive<Moment>(source_id: string, onMoment: (moment: Moment) => void) {
+  const channel = new Channel<Moment>();
+  channel.onmessage = onMoment;
+  return invoke<void>("start_live", { source_id, channel });
+}
+
+export const stopLive = (source_id: string) => invoke<void>("stop_live", { source_id });
+
+export const connectSource = (source_id: string) =>
+  invoke<void>("connect_source", { source_id });
 
 export const disconnectSource = (source_id: string) =>
   invoke<void>("disconnect_source", { source_id });

@@ -144,7 +144,7 @@ export function Chart({ widget, tab, rangeMs, version, hero }: WidgetProps) {
 
       <div className="chart" ref={containerRef}>
         {!hasData ? (
-          <p className="chart-empty">Pulse draws this chart as readings come in.</p>
+          <p className="chart-empty">No readings yet.</p>
         ) : (
           width > 0 && (
             <svg

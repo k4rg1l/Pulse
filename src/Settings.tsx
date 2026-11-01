@@ -15,6 +15,8 @@ import {
 } from "./api";
 import { Picker } from "./Picker";
 import { ShortcutRecorder } from "./ShortcutRecorder";
+import { Switch } from "./Switch";
+import { TabOrder } from "./TabOrder";
 
 interface TrayStat {
   source_id: string;
@@ -40,28 +42,6 @@ const HISTORY_LENGTHS = [
 ];
 
 const statId = ({ source_id, key }: TrayStat) => `${source_id}/${key}`;
-
-function Switch({
-  label,
-  on,
-  onChange,
-}: {
-  label: string;
-  on: boolean;
-  onChange: (on: boolean) => void;
-}) {
-  return (
-    <button
-      className="switch"
-      role="switch"
-      aria-label={label}
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-    >
-      <span className="switch-thumb" />
-    </button>
-  );
-}
 
 function ApiKeyRow({
   sourceId,
@@ -113,10 +93,12 @@ export function Settings({
   tabs,
   active,
   onOpenTab,
+  onTabsChanged,
 }: {
   tabs: TabSummary[];
   active: boolean;
   onOpenTab: (sourceId: string) => void;
+  onTabsChanged: () => void;
 }) {
   const [sources, setSources] = useState<SourceOptions[]>([]);
   const [trayStat, setTrayStat] = useState<TrayStat>(DEFAULT_TRAY_STAT);
@@ -235,15 +217,17 @@ export function Settings({
               label="Tray icon stat"
               value={statId(trayStat)}
               onChange={chooseTrayStat}
-              groups={sources.map(({ tab, metrics }) => ({
-                label: tab.name,
-                options: metrics
-                  .filter((metric) => metric.unit !== "timestamp")
-                  .map((metric) => ({
-                    value: statId({ source_id: tab.source_id, key: metric.key }),
-                    label: metric.label,
-                  })),
-              }))}
+              groups={sources
+                .filter(({ metrics }) => metrics.length > 0)
+                .map(({ tab, metrics }) => ({
+                  label: tab.name,
+                  options: metrics
+                    .filter((metric) => metric.unit !== "timestamp")
+                    .map((metric) => ({
+                      value: statId({ source_id: tab.source_id, key: metric.key }),
+                      label: metric.label,
+                    })),
+                }))}
             />
           </li>
           <li className="setting">
@@ -273,7 +257,7 @@ export function Settings({
           <li className="setting">
             <div className="setting-text">
               <span>Start at login</span>
-              <span className="caption">Pulse starts quietly with Windows.</span>
+              <span className="caption">Pulse starts with Windows.</span>
             </div>
             <Switch label="Start at login" on={startAtLogin} onChange={chooseStartAtLogin} />
           </li>
@@ -290,6 +274,8 @@ export function Settings({
             />
           </li>
         </ul>
+
+        <TabOrder onChanged={onTabsChanged} />
 
         {withSetup.length > 0 && (
           <section>

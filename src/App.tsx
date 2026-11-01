@@ -1,5 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useRef,
@@ -25,7 +27,13 @@ import { SourceTab } from "./SourceTab";
 import { UpdateCard } from "./UpdateCard";
 import { WelcomeCard } from "./WelcomeCard";
 
+/** Loaded the first time it is shown, so opening Pulse doesn't pay for it. */
+const AudioTab = lazy(() =>
+  import("./audio/AudioTab").then(({ AudioTab }) => ({ default: AudioTab })),
+);
+
 const SETTINGS = "settings";
+const AUDIO = "audio";
 const WELCOME_DISMISSED_SETTING = "welcome_dismissed";
 
 const dismiss = () => getCurrentWindow().close();
@@ -106,6 +114,9 @@ export default function App() {
   const onLoaded = useCallback((sourceId: string) => {
     setLoaded((current) => (current.includes(sourceId) ? current : [...current, sourceId]));
   }, []);
+  const onAudioLoaded = useCallback(() => onLoaded(AUDIO), [onLoaded]);
+  const audioShown = useRef(false);
+  if (selected === AUDIO) audioShown.current = true;
 
   // A client that stays alive between openings would otherwise keep its last tab.
   const selectOpeningTab = useCallback(
@@ -134,6 +145,12 @@ export default function App() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [selected]);
+
+  function reloadTabs() {
+    listTabs()
+      .then(setTabs)
+      .catch((error) => setFailure(String(error)));
+  }
 
   function dismissWelcome() {
     setWelcome(null);
@@ -189,15 +206,28 @@ export default function App() {
               {welcome && <WelcomeCard shortcut={welcome} onDismiss={dismissWelcome} />}
               {tabs.map((tab) => (
                 <div key={tab.source_id} hidden={selected !== tab.source_id}>
-                  <SourceTab
-                    sourceId={tab.source_id}
-                    active={selected === tab.source_id}
-                    onLoaded={onLoaded}
-                  />
+                  {tab.source_id === AUDIO ? (
+                    audioShown.current && (
+                      <Suspense fallback={null}>
+                        <AudioTab live={open && selected === AUDIO} onLoaded={onAudioLoaded} />
+                      </Suspense>
+                    )
+                  ) : (
+                    <SourceTab
+                      sourceId={tab.source_id}
+                      active={selected === tab.source_id}
+                      onLoaded={onLoaded}
+                    />
+                  )}
                 </div>
               ))}
               <div hidden={selected !== SETTINGS}>
-                <Settings tabs={tabs} active={selected === SETTINGS} onOpenTab={setSelected} />
+                <Settings
+                  tabs={tabs}
+                  active={selected === SETTINGS}
+                  onOpenTab={setSelected}
+                  onTabsChanged={reloadTabs}
+                />
               </div>
             </main>
           </div>

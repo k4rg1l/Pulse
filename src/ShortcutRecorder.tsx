@@ -43,7 +43,7 @@ function rejectionOf(event: KeyboardEvent): string | null {
   if (/^F\d+$/.test(event.code)) return null;
   if (!event.ctrlKey && !event.altKey && !event.metaKey) return "Include Ctrl or Alt";
   // Ctrl plus one key is how every app copies, pastes and saves.
-  if (heldModifiers(event).length === 1 && event.ctrlKey) return "Apps need that one. Add Alt";
+  if (heldModifiers(event).length === 1 && event.ctrlKey) return "Add Alt to this shortcut";
   return null;
 }
 

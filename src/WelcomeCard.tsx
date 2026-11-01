@@ -17,7 +17,7 @@ export function WelcomeCard({
   return (
     <aside className="welcome">
       <div>
-        <h2>Pulse lives in your tray.</h2>
+        <h2>Pulse is in your tray.</h2>
         <p className="caption welcome-how">
           {parts ? (
             <>

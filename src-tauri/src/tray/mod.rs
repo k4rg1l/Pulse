@@ -18,7 +18,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
-use crate::api::AppState;
+use crate::{api::AppState, sources::Unit, tabs};
 
 pub mod icon;
 mod popover;
@@ -30,7 +30,7 @@ use popover::{Bounds, Placement};
 pub const TRAY_STAT_SETTING: &str = "tray_stat";
 
 /// When on, the client is started with Pulse and never shut down, so the popover
-/// opens instantly for about 250 MB more memory.
+/// opens instantly for about 120 MB more memory.
 const KEEP_CLIENT_READY_SETTING: &str = "keep_client_ready";
 
 const TRAY_ID: &str = "pulse";
@@ -151,6 +151,48 @@ fn chosen_stat(app: &AppHandle) -> TrayStat {
         .flatten()
         .and_then(|value| serde_json::from_value(value).ok())
         .unwrap_or_default()
+}
+
+/// A stat from a hidden tab would freeze, so the tray moves to the first shown tab
+/// with a number to offer, or goes blank if none has.
+pub fn keep_stat_on_shown_tabs(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let shown: Vec<_> = tabs::choices(&state)
+        .into_iter()
+        .filter(|choice| choice.shown)
+        .collect();
+    let chosen = chosen_stat(app);
+    if shown
+        .iter()
+        .any(|choice| choice.source_id == chosen.source_id)
+    {
+        return;
+    }
+
+    let next = shown.iter().find_map(|choice| {
+        let source = state.source(&choice.source_id)?;
+        let metric = source
+            .metrics()
+            .into_iter()
+            .find(|metric| !matches!(metric.unit, Unit::Timestamp))?;
+        Some(serde_json::json!({ "source_id": source.id(), "key": metric.key }))
+    });
+    match next {
+        Some(stat) => {
+            let _ = state.store.set_setting(TRAY_STAT_SETTING, &stat);
+            refresh_stat(app);
+        }
+        None => {
+            if let Some(tray) = app.tray_by_id(TRAY_ID) {
+                let _ = tray.set_icon(Some(tile("--", None)));
+                let _ = tray.set_tooltip(Some("Pulse"));
+            }
+            *app.state::<TrayState>()
+                .shown
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+        }
+    }
 }
 
 /// Shows the chosen stat on the icon and in its tooltip.

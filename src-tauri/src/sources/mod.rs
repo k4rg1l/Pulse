@@ -1,8 +1,9 @@
 //! Sources are the unit of extension: adding a new kind of information means
 //! adding one implementation of [`Source`] to [`all`].
 //!
-//! A source only fetches. It never touches the store, the client, or another
-//! source. The scheduler decides when it runs and what happens to the result.
+//! A source fetches, and acts when the user asks. It never touches the store, the
+//! client, or another source. The scheduler decides when it runs and what happens
+//! to the result.
 
 use std::{
     collections::HashMap,
@@ -15,7 +16,10 @@ use std::{
 use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value as Json;
+use tokio::sync::Notify;
 
+mod apps;
+pub mod audio;
 pub mod claude;
 pub mod claude_status_line;
 pub mod codex;
@@ -187,6 +191,10 @@ impl Reading {
     }
 }
 
+/// The live lane: moments too quick to store, sent straight to an open tab. Returns
+/// false once nobody is listening.
+pub type LiveSink = Box<dyn Fn(Json) -> bool + Send>;
+
 #[async_trait]
 pub trait Source: Send + Sync + 'static {
     fn id(&self) -> &'static str;
@@ -217,6 +225,26 @@ pub trait Source: Send + Sync + 'static {
         Ok(())
     }
 
+    /// For sources that are told about changes. `changed` asks the scheduler for a
+    /// run, so a source that gets its news from Windows need not poll for it.
+    fn watch(&self, _changed: Arc<Notify>) {}
+
+    /// Lets go of everything `watch` started, as this source's tab is hidden.
+    fn unwatch(&self) {}
+
+    /// What this source holds only in memory, for data that is never kept.
+    fn state(&self) -> Option<Json> {
+        None
+    }
+
+    /// Does something the user asked for on this source's tab.
+    fn act(&self, _action: Json) -> Result<(), String> {
+        Err(format!("{} has no controls", self.name()))
+    }
+
+    /// Starts or stops the live lane, while someone is looking at this tab.
+    fn set_live(&self, _sink: Option<LiveSink>) {}
+
     /// One run: new data, or a message describing why there is none.
     async fn run(&self, api_keys: HashMap<String, String>) -> Result<Vec<Reading>, String>;
 }
@@ -228,5 +256,6 @@ pub fn all() -> Sources {
         Arc::new(system::SystemResources::default()),
         Arc::new(claude::ClaudeUsage),
         Arc::new(codex::CodexUsage::default()),
+        Arc::new(audio::AudioMixer::default()),
     ]
 }

@@ -1,5 +1,34 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Fit } from "./Fit";
+
+/** Space between the trigger and its list, and between the list and the panel's edge. */
+const MENU_GAP = 6;
+
+/** Floats the list beside its trigger, on whichever side the panel has room for it. */
+function placeMenu(menu: HTMLElement, trigger: HTMLElement) {
+  const button = trigger.getBoundingClientRect();
+  const panel = trigger.closest(".panel-body")?.getBoundingClientRect();
+  const top = panel?.top ?? 0;
+  const bottom = panel?.bottom ?? window.innerHeight;
+  const below = bottom - button.bottom - MENU_GAP * 2;
+  const above = button.top - top - MENU_GAP * 2;
+
+  menu.style.left = `${button.left}px`;
+  menu.style.width = `${button.width}px`;
+  const fitsBelow = menu.scrollHeight <= below || below >= above;
+  menu.style.maxHeight = `${fitsBelow ? below : above}px`;
+  menu.style.transformOrigin = fitsBelow ? "100% 0" : "100% 100%";
+  menu.style.top = fitsBelow
+    ? `${button.bottom + MENU_GAP}px`
+    : `${button.top - MENU_GAP - menu.offsetHeight}px`;
+}
 
 export interface PickerOption {
   value: string;
@@ -25,6 +54,7 @@ export function Picker({ label, value, groups, onChange }: PickerProps) {
   const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLUListElement>(null);
   const baseId = useId();
 
   const options = groups.flatMap((group) => group.options);
@@ -37,6 +67,25 @@ export function Picker({ label, value, groups, onChange }: PickerProps) {
     }
     window.addEventListener("pointerdown", onPointerDown);
     return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !menu.current || !trigger.current) return;
+    const list = menu.current;
+    // The top layer lifts the list out of the page, so opening it moves nothing.
+    list.showPopover();
+    placeMenu(list, trigger.current);
+
+    function onScroll(event: Event) {
+      if (event.target !== list) setOpen(false);
+    }
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("blur", close);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("blur", close);
+    };
   }, [open]);
 
   function show() {
@@ -113,7 +162,14 @@ export function Picker({ label, value, groups, onChange }: PickerProps) {
       </button>
 
       {open && (
-        <ul className="picker-menu" id={`${baseId}-list`} role="listbox" aria-label={label}>
+        <ul
+          ref={menu}
+          className="picker-menu"
+          id={`${baseId}-list`}
+          popover="manual"
+          role="listbox"
+          aria-label={label}
+        >
           {groups.map((group, groupIndex) => (
             <li key={group.label ?? groupIndex} role="presentation">
               {group.label && <p className="picker-group">{group.label}</p>}

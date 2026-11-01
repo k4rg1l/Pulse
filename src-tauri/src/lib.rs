@@ -4,6 +4,7 @@ mod secrets;
 mod sources;
 mod startup;
 mod store;
+mod tabs;
 mod tray;
 mod updates;
 
@@ -45,6 +46,8 @@ pub fn run() {
                 scheduler: scheduler.clone(),
             });
 
+            tabs::apply(&app.state::<AppState>());
+
             let handle = app.handle().clone();
             tray::setup(&handle)?;
             tray::shortcut::register_saved(&handle);
@@ -69,10 +72,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             api::list_tabs,
+            api::get_tab_choices,
+            api::set_tab_choices,
             api::get_tab,
             api::get_history,
             api::client_ready,
             api::refresh_source,
+            api::act,
+            api::start_live,
+            api::stop_live,
             api::connect_source,
             api::disconnect_source,
             api::get_settings,

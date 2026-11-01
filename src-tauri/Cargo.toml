@@ -1,6 +1,6 @@
 [package]
 name = "pulse"
-version = "0.2.1"
+version = "0.3.0"
 description = "Everything you care about, in one tray app"
 authors = ["Vatsal Jain"]
 license = "MIT"
@@ -34,6 +34,27 @@ windows-native-keyring-store = "1.1.0"
 nvml-wrapper = "0.13.0"
 time = { version = "0.3.55", features = ["parsing", "formatting", "local-offset"] }
 tauri-plugin-updater = "2"
+base64 = "0.23"
+png = "0.18"
+windows-core = "0.62"
+windows-future = "0.3"
+windows = { version = "0.62", features = [
+    "Foundation",
+    "Media_Control",
+    "Storage_Streams",
+    "Win32_Devices_FunctionDiscovery",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
