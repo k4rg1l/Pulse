@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23242a" />
+      <stop offset="1" stop-color="#0c0d0f" />
+    </linearGradient>
+    <linearGradient id="heart" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ecdab6" />
+      <stop offset="1" stop-color="#c8ad7c" />
+    </linearGradient>
+    <path
+      id="heart-shape"
+      d="M512 856C322 716 172 588 172 416C172 298 262 212 372 212C432 212 482 240 512 288C542 240 592 212 652 212C762 212 852 298 852 416C852 588 702 716 512 856Z"
+    />
+    <clipPath id="inside-heart">
+      <use href="#heart-shape" />
+    </clipPath>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#tile)" />
+  <use href="#heart-shape" fill="url(#heart)" />
+  <path
+    clip-path="url(#inside-heart)"
+    fill="none"
+    stroke="#101114"
+    stroke-width="50"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M120 520H372L440 372L534 656L604 520H904"
+  />
+</svg>
