@@ -31,6 +31,15 @@
 
   --edge: clamp(1.25rem, 5vw, 5rem);
   --ease-out: cubic-bezier(0.2, 0.85, 0.25, 1);
+
+  --first-photo: url("backgrounds/wallpaper-1920.jpg");
+}
+
+/* Matches LARGE_SCREEN in site.js. */
+@media (min-width: 1921px), (min-resolution: 1.5dppx) {
+  :root {
+    --first-photo: url("backgrounds/wallpaper-3840.jpg");
+  }
 }
 
 * {
@@ -106,9 +115,46 @@ h2 {
   min-height: 100svh;
   padding: 0 var(--edge);
   overflow: hidden;
+  isolation: isolate;
+  background: var(--obsidian);
+}
+
+/* Keeps the pitch and the top bar readable over every photo, bright skies included. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background:
-    linear-gradient(100deg, rgba(8, 12, 15, 0.72) 0%, rgba(8, 12, 15, 0.42) 42%, rgba(8, 12, 15, 0) 72%),
-    url("screenshots/wallpaper.jpg") center / cover;
+    linear-gradient(180deg, rgba(8, 12, 15, 0.55) 0, rgba(8, 12, 15, 0) 8rem),
+    linear-gradient(
+      100deg,
+      rgba(8, 12, 15, 0.74) 0%,
+      rgba(8, 12, 15, 0.46) 42%,
+      rgba(8, 12, 15, 0) 72%
+    );
+}
+
+/* Two layers take turns. See reveal in site.js. FADE_MS there matches this. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background: center / cover no-repeat;
+  opacity: 0;
+  transition: opacity 2.8s ease-in-out;
+}
+
+.backdrop-first {
+  background-image: var(--first-photo);
+}
+
+.backdrop-front {
+  z-index: -2;
+}
+
+.backdrop-showing {
+  opacity: 1;
 }
 
 .bar {
@@ -296,9 +342,14 @@ kbd {
   .hero {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
-    background:
-      linear-gradient(180deg, rgba(8, 12, 15, 0.7) 0%, rgba(8, 12, 15, 0.25) 60%),
-      url("screenshots/wallpaper.jpg") 20% center / cover;
+  }
+
+  .hero::before {
+    background: linear-gradient(180deg, rgba(8, 12, 15, 0.7) 0%, rgba(8, 12, 15, 0.25) 60%);
+  }
+
+  .backdrop {
+    background-position: 20% center;
   }
 
   .pitch {
