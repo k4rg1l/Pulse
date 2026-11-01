@@ -34,6 +34,13 @@ async function prepare(name) {
   return url;
 }
 
+/** Starts a layer's slow zoom from the beginning, as a layer is used over and over. */
+function restartDrift(layer) {
+  layer.classList.remove("backdrop-drifting");
+  void layer.offsetWidth;
+  layer.classList.add("backdrop-drifting");
+}
+
 /**
  * Fades the new photo in over the current one, which stays solid underneath.
  * Fading both at once would let the dark page show through halfway.
@@ -41,6 +48,7 @@ async function prepare(name) {
 async function reveal(url, incoming, outgoing) {
   outgoing.classList.remove("backdrop-front");
   incoming.style.backgroundImage = `url("${url}")`;
+  restartDrift(incoming);
   incoming.classList.add("backdrop-front", "backdrop-showing");
   await wait(FADE_MS);
   outgoing.classList.remove("backdrop-showing");

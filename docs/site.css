@@ -142,7 +142,29 @@ h2 {
   z-index: -3;
   background: center / cover no-repeat;
   opacity: 0;
+  transform-origin: 30% 40%;
   transition: opacity 2.8s ease-in-out;
+  will-change: transform;
+}
+
+/* The layers take turns, so each photo drifts the opposite way to the last. */
+.backdrop + .backdrop {
+  transform-origin: 70% 60%;
+}
+
+/* Outlasts a photo's hold and both of its fades, so the motion never stops on screen. */
+.backdrop-drifting {
+  animation: drift 20s linear both;
+}
+
+@keyframes drift {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.07);
+  }
 }
 
 .backdrop-first {
@@ -438,7 +460,8 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anchored {
+  .anchored,
+  .backdrop-drifting {
     animation: none;
   }
 }
