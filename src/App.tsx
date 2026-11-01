@@ -16,6 +16,7 @@ import {
   onPopoverOpened,
   updateSetting,
   type Anchor,
+  type Setting,
   type ShortcutStatus,
   type TabSummary,
 } from "./api";
@@ -28,11 +29,19 @@ const WELCOME_DISMISSED_SETTING = "welcome_dismissed";
 
 const dismiss = () => getCurrentWindow().close();
 
+/** The tab Pulse opens on: the one chosen in Settings, or else the first there is. */
+function openingTab(tabs: TabSummary[], settings: Setting[]) {
+  const preferred = settings.find((setting) => setting.key === "default_tab")?.value;
+  const chosen = tabs.find((tab) => tab.source_id === preferred);
+  return (chosen ?? tabs[0])?.source_id ?? SETTINGS;
+}
+
 /**
  * Tracks the panel's anchor and whether it should be showing. A new client is only
  * shown once `ready`, so the panel opens at its real height with its content in it.
+ * `prepare` runs before each opening, while the panel is still invisible.
  */
-function usePopover(ready: boolean) {
+function usePopover(ready: boolean, prepare: () => Promise<void>) {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [open, setOpen] = useState(false);
   const listening = useRef<Promise<unknown>>(null);
@@ -40,7 +49,7 @@ function usePopover(ready: boolean) {
   useEffect(() => {
     const opened = onPopoverOpened((next) => {
       setAnchor(next);
-      requestAnimationFrame(() => setOpen(true));
+      prepare().then(() => requestAnimationFrame(() => setOpen(true)));
     });
     const closing = onPopoverClosing(() => setOpen(false));
     listening.current = Promise.all([opened, closing]);
@@ -55,7 +64,7 @@ function usePopover(ready: boolean) {
       closing.then((stop) => stop());
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [prepare]);
 
   useEffect(() => {
     if (!ready) return;
@@ -97,19 +106,26 @@ export default function App() {
     setLoaded((current) => (current.includes(sourceId) ? current : [...current, sourceId]));
   }, []);
 
+  // A client that stays alive between openings would otherwise keep its last tab.
+  const selectOpeningTab = useCallback(
+    () =>
+      Promise.all([listTabs(), getSettings()])
+        .then(([tabs, settings]) => setSelected(openingTab(tabs, settings)))
+        .catch((error) => setFailure(String(error))),
+    [],
+  );
+
   const ready =
     failure !== null || selected === SETTINGS || (selected !== null && loaded.includes(selected));
-  const { anchor, open } = usePopover(ready);
+  const { anchor, open } = usePopover(ready, selectOpeningTab);
 
   useEffect(() => {
     Promise.all([listTabs(), getSettings(), getShortcut()])
       .then(([tabs, settings, shortcut]) => {
-        const preferred = settings.find((setting) => setting.key === "default_tab")?.value;
-        const known = tabs.some((tab) => tab.source_id === preferred);
         const dismissed = settings.some((setting) => setting.key === WELCOME_DISMISSED_SETTING);
         setTabs(tabs);
         setWelcome(dismissed ? null : shortcut);
-        setSelected(known ? (preferred as string) : (tabs[0]?.source_id ?? SETTINGS));
+        setSelected(openingTab(tabs, settings));
       })
       .catch((error) => setFailure(String(error)));
   }, []);
