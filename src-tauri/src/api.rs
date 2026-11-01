@@ -20,6 +20,7 @@ use crate::{
         self,
         shortcut::{self, ShortcutStatus},
     },
+    updates,
 };
 
 pub const SOURCE_CHANGED: &str = "source_changed";
@@ -187,6 +188,16 @@ pub fn set_shortcut(shortcut: Option<String>, app: AppHandle) -> Result<Shortcut
 #[tauri::command(async, rename_all = "snake_case")]
 pub fn pause_shortcut(paused: bool, app: AppHandle) -> Result<(), String> {
     shortcut::pause(&app, paused)
+}
+
+#[tauri::command(async, rename_all = "snake_case")]
+pub fn get_update(app: AppHandle) -> Option<String> {
+    updates::available_version(&app)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    updates::install(&app).await
 }
 
 #[tauri::command(async, rename_all = "snake_case")]

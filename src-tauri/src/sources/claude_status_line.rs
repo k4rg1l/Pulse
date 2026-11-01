@@ -36,7 +36,7 @@ const TERMS: Terms = Terms {
     never: &[
         "See or store your Claude login",
         "Keep the text of your conversations",
-        "Send anything off this computer",
+        "Send your usage data off this computer",
     ],
     note: "Your existing status line keeps working. Disconnect at any time in Settings to \
            restore your settings and clear these figures.",

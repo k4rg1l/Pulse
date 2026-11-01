@@ -47,6 +47,7 @@ Nothing connects until you say so. Before Pulse reads anything, it shows you exa
 - **Your figures stay on your computer.** Pulse has no account, no server and no analytics.
 - **Pulse never sees your logins.** Claude data comes from what Claude Code keeps on your computer. Codex data comes through Codex itself, which contacts OpenAI using its own sign-in.
 - **Conversations are never kept.** Claude transcripts are read to count tokens, and only the counts are stored.
+- **Pulse checks GitHub for new versions.** That check sends none of your data, and an update installs only when you click Update.
 
 ## Settings
 

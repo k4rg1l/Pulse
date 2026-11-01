@@ -149,8 +149,15 @@ export const setShortcut = (shortcut: string | null) =>
 
 export const pauseShortcut = (paused: boolean) => invoke<void>("pause_shortcut", { paused });
 
+export const getUpdate = () => invoke<string | null>("get_update");
+
+export const installUpdate = () => invoke<void>("install_update");
+
 export const onSourceChanged =(handler: (sourceId: string) => void): Promise<UnlistenFn> =>
   listen<string>("source_changed", (event) => handler(event.payload));
+
+export const onUpdateAvailable = (handler: (version: string) => void): Promise<UnlistenFn> =>
+  listen<string>("update_available", (event) => handler(event.payload));
 
 export const onPopoverOpened = (handler: (anchor: Anchor | null) => void): Promise<UnlistenFn> =>
   listen<Anchor | null>("popover_opened", (event) => handler(event.payload));

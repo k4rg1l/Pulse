@@ -22,6 +22,7 @@ import {
 } from "./api";
 import { Settings } from "./Settings";
 import { SourceTab } from "./SourceTab";
+import { UpdateCard } from "./UpdateCard";
 import { WelcomeCard } from "./WelcomeCard";
 
 const SETTINGS = "settings";
@@ -184,6 +185,7 @@ export default function App() {
           <div className="panel-scroll" ref={scrollRef}>
             <main className="content">
               {failure && <p className="notice">Pulse could not start: {failure}</p>}
+              <UpdateCard />
               {welcome && <WelcomeCard shortcut={welcome} onDismiss={dismissWelcome} />}
               {tabs.map((tab) => (
                 <div key={tab.source_id} hidden={selected !== tab.source_id}>

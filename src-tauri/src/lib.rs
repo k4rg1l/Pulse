@@ -5,6 +5,7 @@ mod sources;
 mod startup;
 mod store;
 mod tray;
+mod updates;
 
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ pub use sources::claude_status_line::{HOOK_FLAG as CLAUDE_HOOK_FLAG, run_hook as
 use api::AppState;
 use scheduler::{OnChange, Scheduler};
 use store::Store;
+use updates::AvailableUpdate;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -26,6 +28,8 @@ pub fn run() {
         }))
         .plugin(tray::shortcut::plugin())
         .plugin(startup::plugin())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(AvailableUpdate::default())
         .setup(|app| {
             secrets::init()?;
 
@@ -45,6 +49,7 @@ pub fn run() {
             tray::setup(&handle)?;
             tray::shortcut::register_saved(&handle);
             startup::run(&handle);
+            updates::watch(&handle);
 
             let on_change: OnChange = Arc::new(move |source_id| {
                 tray::source_changed(&handle, source_id);
@@ -79,6 +84,8 @@ pub fn run() {
             api::pause_shortcut,
             api::get_start_at_login,
             api::set_start_at_login,
+            api::get_update,
+            api::install_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Pulse")
