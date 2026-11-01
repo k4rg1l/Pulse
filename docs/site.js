@@ -2,6 +2,8 @@
 
 const PHOTOS = ["wallpaper", "lake", "clouds", "stars", "ocean", "cliffs", "forest"];
 
+const LATEST_RELEASE = "https://api.github.com/repos/k4rg1l/Pulse/releases/latest";
+
 /** How long each photo stays before the next begins to appear. */
 const HOLD_MS = 11000;
 
@@ -65,3 +67,14 @@ async function rotate() {
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 if (!reducedMotion && !navigator.connection?.saveData) rotate();
+
+/** Names the newest release beside the download button, so it never goes stale. */
+async function showVersion() {
+  const response = await fetch(LATEST_RELEASE);
+  if (!response.ok) return;
+  const { tag_name: tag } = await response.json();
+  document.getElementById("version").textContent = ` Version ${tag.replace(/^v/, "")}.`;
+}
+
+// Without GitHub the line simply reads as it did, so a failure is not worth showing.
+showVersion().catch(() => {});
