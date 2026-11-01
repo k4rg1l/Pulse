@@ -344,6 +344,7 @@ main {
   inset: 0;
   margin: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   opacity: 0;
   transition: opacity 0.6s ease;
@@ -390,9 +391,8 @@ main {
   container-type: inline-size;
   display: grid;
   place-items: center;
-  height: 100%;
+  width: min(100%, calc(84svh * 18 / 23));
   aspect-ratio: 18 / 23;
-  max-width: 100%;
   border-radius: 1.25rem;
   background: var(--graphite) url("backgrounds/lake-1920.jpg") center / cover;
 }
@@ -622,7 +622,6 @@ kbd {
 
   .demo {
     width: 100%;
-    height: auto;
   }
 }
 
