@@ -226,16 +226,21 @@ h2 {
 .anchored {
   position: relative;
   align-self: end;
-  width: clamp(20rem, 62svh, 33rem);
+  width: clamp(20rem, 52svh, 33rem);
   margin-right: calc(var(--edge) * -0.5);
   padding-bottom: 2.6rem;
   animation: rise 0.7s var(--ease-out) both;
 }
 
-/* The image's own margin holds the shadow, with the notch's tip 11.6% of its width
-   above the bottom edge. This leaves the tip just above the tray icon at any size. */
+/* The image's own margin holds the shadow, which fades out before the image's edge.
+   The notch's tip is 3.6% of its width above the bottom edge, so this leaves the tip
+   just above the tray icon at any size. */
 .panel {
-  margin-bottom: -11.3%;
+  margin-bottom: -3.3%;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent),
+    linear-gradient(180deg, transparent, #000 2.6%, #000 98.6%, transparent);
+  mask-composite: intersect;
 }
 
 .tray-tile {

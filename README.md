@@ -4,7 +4,7 @@ Everything you care about, in one tray app.
 
 Pulse is a Windows tray app that shows your computer, your Claude limits, your Codex limits and your audio in one panel. Open it with a click or a shortcut. It's a free, open source alternative to CodexBar for Windows.
 
-![Pulse showing System Resources, Codex and Claude](docs/screenshots/hero.jpg)
+![Pulse showing System Resources, Audio and Claude](docs/screenshots/hero.jpg)
 
 ## Download
 
@@ -37,7 +37,9 @@ The pace chart shows a limit across its whole window, against a line for even us
 
 ### Audio
 
-Switch output and input devices, set the volume of each app, mute apps and the microphone, and control what is playing. Each app's line follows its own sound on Windows 11. Each app takes its colour from its icon, or from the album art while it plays music.
+Switch output and input devices, set the volume of each app, mute outputs, apps and the microphone, and control what is playing. Each app's line follows its own sound on Windows 11. Each app takes its colour from its icon, or from the album art while it plays music.
+
+<img src="docs/screenshots/audio.jpg" width="49%" alt="The Audio tab with a green line following the music, the track playing, and each app's volume" />
 
 ## Your data
 
