@@ -210,9 +210,10 @@ h2 {
   animation: rise 0.7s var(--ease-out) both;
 }
 
-/* The image's own margin holds the shadow, so it overlaps the corner of the page. */
+/* The image's own margin holds the shadow, with the notch's tip 11.6% of its width
+   above the bottom edge. This leaves the tip just above the tray icon at any size. */
 .panel {
-  margin-bottom: -9.15%;
+  margin-bottom: -11.3%;
 }
 
 .tray-tile {
