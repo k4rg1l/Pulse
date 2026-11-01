@@ -59,4 +59,10 @@ jobs:
           fi
           cp src-tauri/target/release/bundle/nsis/*-setup.exe Pulse-setup.exe
           sha256sum Pulse-setup.exe > Pulse-setup.exe.sha256
-          gh release upload "v$VERSION" Pulse-setup.exe Pulse-setup.exe.sha256 --clobber
+          # The action links updates to GitHub's API, which limits how often each
+          # address can use it, so people on a shared network could be refused.
+          gh release download "v$VERSION" --pattern latest.json --clobber
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Pulse_${VERSION}_x64-setup.exe"
+          jq --arg url "$url" '.platforms |= map_values(.url = $url)' latest.json > latest.tmp
+          mv latest.tmp latest.json
+          gh release upload "v$VERSION" Pulse-setup.exe Pulse-setup.exe.sha256 latest.json --clobber
